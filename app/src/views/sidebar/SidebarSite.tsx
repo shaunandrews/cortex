@@ -1,8 +1,8 @@
 import { type MouseEvent } from 'react';
-import { Text } from '@wordpress/ui';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import type { WPComSite } from '../../api/types';
+import { MenuItem } from '../../components';
 
 type Props = {
   site: WPComSite;
@@ -25,14 +25,7 @@ export default function SidebarSite({
   onSelect,
   onContextMenu,
 }: Props) {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: `site-${site.ID}`,
     data: { type: 'site', siteId: site.ID, groupId },
   });
@@ -44,25 +37,30 @@ export default function SidebarSite({
   };
 
   return (
-    <button
+    <MenuItem
       ref={setNodeRef}
-      data-index={dataIndex}
-      data-site-id={site.ID}
-      className={`sidebar-item${isSelected ? ' is-selected' : ''}${isFocused ? ' is-focused' : ''}${isDragging ? ' is-dragging' : ''}`}
+      className={isDragging ? 'is-dragging' : undefined}
+      icon={
+        <span className="site-icon">
+          {site.icon?.img ? (
+            <img src={site.icon.img} alt="" />
+          ) : (
+            <span>{site.name.charAt(0).toUpperCase()}</span>
+          )}
+        </span>
+      }
+      label={site.name}
+      count={unseen}
+      isSelected={isSelected}
+      isFocused={isFocused}
       onClick={onSelect}
       onContextMenu={onContextMenu}
       style={style}
+      data-index={dataIndex}
+      data-site-id={site.ID}
       {...attributes}
       {...listeners}
       tabIndex={-1}
-    >
-      <div className="sidebar-item-icon">
-        {site.icon?.img ? <img src={site.icon.img} alt="" /> : <span>{site.name.charAt(0)}</span>}
-      </div>
-      <Text variant="body-md" className="sidebar-item-name">
-        {site.name}
-      </Text>
-      {unseen > 0 && <span className="unseen-badge">{unseen}</span>}
-    </button>
+    />
   );
 }

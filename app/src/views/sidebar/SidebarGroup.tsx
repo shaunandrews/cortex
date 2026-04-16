@@ -44,7 +44,6 @@ export default function SidebarGroup({
     >
       <SidebarGroupHeader
         group={group}
-        siteCount={sites.length}
         onToggle={onToggleCollapse}
         onContextMenu={onGroupContextMenu}
       />
@@ -60,7 +59,7 @@ export default function SidebarGroup({
                   key={site.ID}
                   site={site}
                   groupId={group.id}
-                  unseen={group.showUnread ? unseenMap.get(site.ID) ?? 0 : 0}
+                  unseen={group.showUnread ? (unseenMap.get(site.ID) ?? 0) : 0}
                   isSelected={site.ID === selectedSiteId}
                   isFocused={startIndex + i === focusedIndex}
                   dataIndex={startIndex + i}

@@ -26,6 +26,7 @@ import {
 } from '@dnd-kit/sortable';
 import type { WPComSite } from '../../api/types';
 import type { Group, useSidebarGroups } from '../../hooks/useSidebarGroups';
+import { MenuItem } from '../../components';
 import SidebarNav from './SidebarNav';
 import SidebarSearch from './SidebarSearch';
 import SidebarGroup from './SidebarGroup';
@@ -91,9 +92,7 @@ export default function Sidebar({
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const [activeDrag, setActiveDrag] = useState<
-    | { type: 'site'; site: WPComSite }
-    | { type: 'group-header'; group: Group }
-    | null
+    { type: 'site'; site: WPComSite } | { type: 'group-header'; group: Group } | null
   >(null);
 
   const sensors = useSensors(
@@ -102,9 +101,8 @@ export default function Sidebar({
   );
 
   // Reset focus when search changes.
-  useEffect(() => {
-    setFocusedIndex(-1);
-  }, [searchQuery]);
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => setFocusedIndex(-1), [searchQuery]);
 
   // Scroll focused row into view.
   useEffect(() => {
@@ -126,9 +124,7 @@ export default function Sidebar({
     if (!q) return visible;
     const result: typeof visible = [];
     for (const entry of visible) {
-      const matching = entry.sites.filter((s) =>
-        s.name.toLowerCase().includes(q),
-      );
+      const matching = entry.sites.filter((s) => s.name.toLowerCase().includes(q));
       if (matching.length > 0) {
         result.push({ group: entry.group, sites: matching });
       }
@@ -259,31 +255,30 @@ export default function Sidebar({
   }
 
   const activeGroup = groupMenu
-    ? store.groups.find((g) => g.id === groupMenu.groupId) ?? null
+    ? (store.groups.find((g) => g.id === groupMenu.groupId) ?? null)
     : null;
-  const activeSite = siteMenu
-    ? sites?.find((s) => s.ID === siteMenu.siteId) ?? null
-    : null;
-  const activeSiteGroupId = activeSite
-    ? store.membership[activeSite.ID] ?? 'sites'
-    : 'sites';
+  const activeSite = siteMenu ? (sites?.find((s) => s.ID === siteMenu.siteId) ?? null) : null;
+  const activeSiteGroupId = activeSite ? (store.membership[activeSite.ID] ?? 'sites') : 'sites';
 
   const dialogInitialName =
     dialog?.mode === 'rename'
-      ? store.groups.find((g) => g.id === dialog.groupId)?.name ?? ''
+      ? (store.groups.find((g) => g.id === dialog.groupId)?.name ?? '')
       : '';
   const existingNames = store.groups.map((g) => g.name);
 
-  let runningIndex = 0;
+  const startIndices = useMemo(() => {
+    const map = new Map<string, number>();
+    let idx = 0;
+    for (const entry of filtered) {
+      map.set(entry.group.id, idx);
+      if (!entry.group.collapsed) idx += entry.sites.length;
+    }
+    return map;
+  }, [filtered]);
 
   return (
     <aside className="sidebar">
-      <SidebarNav
-        isHome={isHome}
-        isSaved={isSaved}
-        onGoHome={onGoHome}
-        onGoSaved={onGoSaved}
-      />
+      <SidebarNav isHome={isHome} isSaved={isSaved} onGoHome={onGoHome} onGoSaved={onGoSaved} />
       <SidebarSearch
         value={searchQuery}
         onChange={setSearchQuery}
@@ -314,40 +309,41 @@ export default function Sidebar({
               items={filtered.map((e) => `group-header-${e.group.id}`)}
               strategy={verticalListSortingStrategy}
             >
-              {filtered.map((entry) => {
-                const startIndex = runningIndex;
-                if (!entry.group.collapsed) runningIndex += entry.sites.length;
-                return (
-                  <SidebarGroup
-                    key={entry.group.id}
-                    group={entry.group}
-                    sites={entry.sites}
-                    unseenMap={unseenMap}
-                    selectedSiteId={selectedSiteId}
-                    focusedIndex={focusedIndex}
-                    startIndex={startIndex}
-                    onSelectSite={onSelectSite}
-                    onToggleCollapse={(e) => handleHeaderClick(entry.group, e)}
-                    onGroupContextMenu={(e) => handleGroupContextMenu(entry.group.id, e)}
-                    onSiteContextMenu={handleSiteContextMenu}
-                  />
-                );
-              })}
+              {filtered.map((entry) => (
+                <SidebarGroup
+                  key={entry.group.id}
+                  group={entry.group}
+                  sites={entry.sites}
+                  unseenMap={unseenMap}
+                  selectedSiteId={selectedSiteId}
+                  focusedIndex={focusedIndex}
+                  startIndex={startIndices.get(entry.group.id) ?? 0}
+                  onSelectSite={onSelectSite}
+                  onToggleCollapse={(e) => handleHeaderClick(entry.group, e)}
+                  onGroupContextMenu={(e) => handleGroupContextMenu(entry.group.id, e)}
+                  onSiteContextMenu={handleSiteContextMenu}
+                />
+              ))}
             </SortableContext>
           )}
         </div>
         <DragOverlay>
           {activeDrag?.type === 'site' && (
-            <div className="sidebar-item is-dragging-overlay">
-              <div className="sidebar-item-icon">
-                {activeDrag.site.icon?.img ? (
-                  <img src={activeDrag.site.icon.img} alt="" />
-                ) : (
-                  <span>{activeDrag.site.name.charAt(0)}</span>
-                )}
-              </div>
-              <span className="sidebar-item-name">{activeDrag.site.name}</span>
-            </div>
+            <MenuItem
+              className="is-dragging-overlay"
+              icon={
+                <span className="site-icon">
+                  {activeDrag.site.icon?.img ? (
+                    <img src={activeDrag.site.icon.img} alt="" />
+                  ) : (
+                    <span>{activeDrag.site.name.charAt(0).toUpperCase()}</span>
+                  )}
+                </span>
+              }
+              label={activeDrag.site.name}
+              tabIndex={-1}
+              aria-hidden="true"
+            />
           )}
           {activeDrag?.type === 'group-header' && (
             <div className="sidebar-group-header is-dragging-overlay">
@@ -374,7 +370,7 @@ export default function Sidebar({
         site={activeSite}
         currentGroupId={activeSiteGroupId}
         groups={store.groups}
-        unseen={activeSite ? unseenMap.get(activeSite.ID) ?? 0 : 0}
+        unseen={activeSite ? (unseenMap.get(activeSite.ID) ?? 0) : 0}
         onClose={() => setSiteMenu(null)}
         onToggleFavorite={() => activeSite && store.toggleFavorite(activeSite.ID)}
         onMoveTo={(groupId) => activeSite && store.moveSite(activeSite.ID, groupId)}
