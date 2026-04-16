@@ -24,7 +24,7 @@ npm run dev
 |---|---|
 | `VITE_WPCOM_CLIENT_ID` | WordPress.com OAuth app client ID |
 | `VITE_WPCOM_CLIENT_SECRET` | WordPress.com OAuth app client secret |
-| `VITE_WPCOM_REDIRECT_URI` | OAuth callback URL (e.g. `http://localhost:5176/callback`) |
+| `VITE_WPCOM_REDIRECT_URI` | OAuth callback URL — must be `http://localhost:5176/callback` (port is fixed) |
 
 ## Architecture
 
@@ -62,7 +62,7 @@ See [docs/api.md](docs/api.md) for WP.com API details, [docs/features.md](docs/f
 
 ```bash
 cd app
-npm run dev          # Start dev server
+npm run dev          # Start dev server (port 5176)
 npm run build        # TypeScript check + production build
 npm run lint         # ESLint
 npm run test         # Run all tests

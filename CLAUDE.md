@@ -20,7 +20,7 @@ npm run test:watch # Run tests in watch mode (vitest)
 npm run preview    # Preview production build
 ```
 
-Use Port Keeper for the dev server port — see global CLAUDE.md.
+Dev server is pinned to port 5176 (`strictPort: true` in vite.config.ts) — the WP.com OAuth app has this as the registered callback URL. Port is reserved via `portman reserve 5176 -n "cortex"`.
 
 ## Architecture
 
@@ -76,7 +76,7 @@ Cross-posts are detected by the `p2-xpost` tag and origin metadata (`xpost_origi
 
 - `VITE_WPCOM_CLIENT_ID` — WP.com OAuth app client ID
 - `VITE_WPCOM_CLIENT_SECRET` — WP.com OAuth app client secret
-- `VITE_WPCOM_REDIRECT_URI` — OAuth callback URL (e.g. `http://localhost:5176/callback`)
+- `VITE_WPCOM_REDIRECT_URI` — OAuth callback URL (`http://localhost:5176/callback` — must match the registered redirect in the WP.com OAuth app, do not change the port)
 
 ## Testing
 
