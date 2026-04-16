@@ -186,12 +186,13 @@ describe('SyncBridge (direct mode)', () => {
     expect(postsData!.pageParams).toEqual([1]);
   });
 
-  it('populates individual p2-post caches (double-fetch fix)', async () => {
+  it('does not populate individual p2-post cache with lightweight posts', async () => {
     await bridge.start('test-token', []);
 
+    // Lightweight posts (no content) should NOT be written to individual cache
+    // to avoid blocking useP2Post from fetching the full version
     const post = queryClient.getQueryData(['p2-post', 10, 1]);
-    expect(post).toBeDefined();
-    expect((post as { title: string }).title).toBe('Post 1');
+    expect(post).toBeUndefined();
   });
 
   it('hydrates from IndexedDB on subsequent startup', async () => {

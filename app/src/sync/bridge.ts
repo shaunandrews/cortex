@@ -242,21 +242,9 @@ export class SyncBridge {
       },
     );
 
-    // Populate individual post caches (fixes the double-fetch)
-    for (const post of sorted) {
-      this.queryClient.setQueryData(['p2-post', siteId, post.ID], (existing: unknown) => {
-        // Don't overwrite if existing data has content (richer)
-        if (
-          existing &&
-          typeof existing === 'object' &&
-          'content' in existing &&
-          (existing as { content?: string }).content
-        ) {
-          return existing;
-        }
-        return post;
-      });
-    }
+    // Don't write lightweight posts to individual ['p2-post'] cache —
+    // they lack content, which would prevent useP2Post from fetching
+    // the full version for the detail panel.
   }
 
   private sendToBridge(msg: BridgeMessage): void {
