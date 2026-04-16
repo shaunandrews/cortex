@@ -14,38 +14,51 @@ export function usePostSummary(siteId: number, postId: number, content: string |
   const queryClient = useQueryClient();
   const [streamedSummary, setStreamedSummary] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const activeRef = useRef('');
+  const [error, setError] = useState<string | null>(null);
+
+  // Generation counter prevents stale chunks from updating state.
+  // Each new request (effect or regenerate) increments this; chunk callbacks
+  // only write if their captured generation still matches current.
+  const generationRef = useRef(0);
+  const controllerRef = useRef<AbortController | null>(null);
 
   const cacheKey = useMemo(() => ['post-summary', siteId, postId], [siteId, postId]);
   const cached = queryClient.getQueryData<string>(cacheKey);
 
   useEffect(() => {
     if (!token || !content || postId <= 0 || siteId <= 0) return;
-    if (cached) return; // Already have a summary
+    if (cached) return;
 
-    const key = `${siteId}-${postId}`;
-    if (activeRef.current === key) return;
+    // Abort any in-flight request (effect or regenerate)
+    controllerRef.current?.abort();
 
-    activeRef.current = key;
-    setStreamedSummary('');
-    setIsLoading(true);
-
+    const gen = ++generationRef.current;
     const controller = new AbortController();
+    controllerRef.current = controller;
+
+    setStreamedSummary('');
+    setError(null);
+    setIsLoading(true);
 
     streamAISummary(
       token,
       stripHtml(content),
-      (chunk) => setStreamedSummary((prev) => prev + chunk),
+      (chunk) => {
+        if (generationRef.current !== gen) return;
+        setStreamedSummary((prev) => prev + chunk);
+      },
       controller.signal,
     )
       .then((full) => {
+        if (generationRef.current !== gen) return;
         queryClient.setQueryData(cacheKey, full);
         setIsLoading(false);
       })
       .catch((err) => {
-        if (err.name !== 'AbortError') {
-          setIsLoading(false);
-        }
+        if (err.name === 'AbortError') return;
+        if (generationRef.current !== gen) return;
+        setError('Summary failed to generate.');
+        setIsLoading(false);
       });
 
     return () => controller.abort();
@@ -53,29 +66,40 @@ export function usePostSummary(siteId: number, postId: number, content: string |
 
   const regenerate = useCallback(() => {
     if (!token || !content || postId <= 0 || siteId <= 0) return;
+
+    // Abort any in-flight request
+    controllerRef.current?.abort();
+
+    const gen = ++generationRef.current;
+    const controller = new AbortController();
+    controllerRef.current = controller;
+
     queryClient.removeQueries({ queryKey: cacheKey });
-    activeRef.current = '';
     setStreamedSummary('');
+    setError(null);
     setIsLoading(true);
 
-    const controller = new AbortController();
     streamAISummary(
       token,
       stripHtml(content),
-      (chunk) => setStreamedSummary((prev) => prev + chunk),
+      (chunk) => {
+        if (generationRef.current !== gen) return;
+        setStreamedSummary((prev) => prev + chunk);
+      },
       controller.signal,
     )
       .then((full) => {
+        if (generationRef.current !== gen) return;
         queryClient.setQueryData(cacheKey, full);
-        activeRef.current = `${siteId}-${postId}`;
         setIsLoading(false);
       })
       .catch((err) => {
-        if (err.name !== 'AbortError') {
-          setIsLoading(false);
-        }
+        if (err.name === 'AbortError') return;
+        if (generationRef.current !== gen) return;
+        setError('Summary failed to generate.');
+        setIsLoading(false);
       });
   }, [token, siteId, postId, content, cacheKey, queryClient]);
 
-  return { summary: cached ?? streamedSummary, isLoading, regenerate };
+  return { summary: cached ?? streamedSummary, isLoading, error, regenerate };
 }

@@ -202,30 +202,36 @@ export async function streamAISummary(
   let full = '';
   let buffer = '';
 
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
 
-    buffer += decoder.decode(value, { stream: true });
-    const lines = buffer.split('\n');
-    buffer = lines.pop()!;
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split('\n');
+      buffer = lines.pop()!;
 
-    for (const line of lines) {
-      if (!line.startsWith('data: ')) continue;
-      const data = line.slice(6).trim();
-      if (data === '[DONE]') continue;
+      for (const line of lines) {
+        if (!line.startsWith('data: ')) continue;
+        const data = line.slice(6).trim();
+        if (data === '[DONE]') continue;
 
-      try {
-        const parsed = JSON.parse(data);
-        const chunk = parsed.choices?.[0]?.delta?.content;
-        if (chunk) {
-          full += chunk;
-          onChunk(chunk);
+        try {
+          const parsed = JSON.parse(data);
+          const chunk = parsed.choices?.[0]?.delta?.content;
+          if (chunk) {
+            full += chunk;
+            onChunk(chunk);
+          }
+        } catch {
+          // skip malformed SSE chunks
         }
-      } catch {
-        // skip malformed chunks
       }
     }
+  } catch (err) {
+    // If we accumulated partial content, cache what we have rather than losing it
+    if (full) return full;
+    throw err;
   }
 
   return full;
