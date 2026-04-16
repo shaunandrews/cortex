@@ -99,6 +99,7 @@ Cross-posts are detected by the `p2-xpost` tag and origin metadata (`xpost_origi
 - Display font: Bricolage Grotesque 800 (Google Fonts) — **only** for the wordmark (`.header-wordmark`) and the unauthed homepage title (`.unauth-title`). Everything else uses the system font stack.
 - Body/UI font: WPDS system font stack via `--wpds-typography-font-family-body`
 - P2 sites filtered from `/me/sites` by `options.is_wpforteams_site`
+- **Avatar shapes:** People (gravatars) are always circular (`border-radius: 50%`). Sites (blavatars/icons) are always rounded-rect (`border-radius: var(--wpds-border-radius-xs)` or similar). Never mix these up.
 - HTML entities in API responses must be decoded with `decodeEntities()` before rendering
 - `blog_ID` from the Reader API may be a string — always coerce with `Number()` when comparing to site IDs
 
