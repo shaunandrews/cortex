@@ -1,0 +1,60 @@
+.post-row-card {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--wpds-dimension-gap-sm);
+  width: 100%;
+  padding: var(--wpds-dimension-padding-sm) var(--wpds-dimension-padding-md);
+  border: none;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  border-radius: var(--wpds-border-radius-md);
+  transition: background-color var(--motion-duration-quick) var(--motion-easing-default);
+  outline: none;
+}
+
+.post-row-card:hover {
+  background: var(--wpds-color-bg-interactive-neutral-weak-active);
+}
+
+.post-row-card:focus-visible {
+  outline: 2px solid var(--wpds-color-stroke-focus-brand);
+  outline-offset: -2px;
+}
+
+.post-row-card.is-selected,
+.post-row-card.is-selected:hover {
+  background: var(--wpds-color-bg-interactive-brand-weak-active);
+}
+
+.post-row-card-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  margin-top: 2px;
+  object-fit: cover;
+}
+
+.post-row-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
+}
+
+.post-row-card-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.post-row-card-meta {
+  color: var(--wpds-color-fg-content-neutral-weak);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

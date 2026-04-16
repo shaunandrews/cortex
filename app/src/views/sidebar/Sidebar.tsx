@@ -26,7 +26,7 @@ import {
 } from '@dnd-kit/sortable';
 import type { WPComSite } from '../../api/types';
 import type { Group, useSidebarGroups } from '../../hooks/useSidebarGroups';
-import { MenuItem } from '../../components';
+import { EmptyState, MenuItem, SiteIcon } from '../../components';
 import SidebarNav from './SidebarNav';
 import SidebarSearch from './SidebarSearch';
 import SidebarGroup from './SidebarGroup';
@@ -294,16 +294,7 @@ export default function Sidebar({
       >
         <div className="sidebar-groups" ref={scrollRef}>
           {filtered.length === 0 && searchQuery ? (
-            <div className="sidebar-empty">
-              <span
-                style={{
-                  color: 'var(--wpds-color-fg-content-neutral-weak)',
-                  fontSize: 'var(--wpds-typography-font-size-sm)',
-                }}
-              >
-                No matches
-              </span>
-            </div>
+            <EmptyState message="No matches" />
           ) : (
             <SortableContext
               items={filtered.map((e) => `group-header-${e.group.id}`)}
@@ -331,15 +322,7 @@ export default function Sidebar({
           {activeDrag?.type === 'site' && (
             <MenuItem
               className="is-dragging-overlay"
-              icon={
-                <span className="site-icon">
-                  {activeDrag.site.icon?.img ? (
-                    <img src={activeDrag.site.icon.img} alt="" />
-                  ) : (
-                    <span>{activeDrag.site.name.charAt(0).toUpperCase()}</span>
-                  )}
-                </span>
-              }
+              icon={<SiteIcon name={activeDrag.site.name} src={activeDrag.site.icon?.img} />}
               label={activeDrag.site.name}
               tabIndex={-1}
               aria-hidden="true"

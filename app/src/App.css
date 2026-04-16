@@ -302,78 +302,21 @@ body {
 
 .catalog-specimen-stage {
   display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--wpds-dimension-gap-sm);
   padding: var(--wpds-dimension-padding-sm);
   background: var(--wpds-color-bg-surface-neutral);
   border: var(--wpds-border-width-xs) solid var(--wpds-color-stroke-surface-neutral-weak);
   border-radius: var(--wpds-border-radius-md);
+  min-height: 52px;
 }
 
+/* Components that should fill the stage horizontally declare width themselves
+   (e.g. MenuItem, PostRowCard). Others size to their natural width. */
 .catalog-specimen-stage > * {
   min-width: 0;
-  flex: 1;
-}
-
-/* Site icon — 24x24 rounded avatar with image or letter fallback.
-   4px radius is intentional; WPDS's xs=2 is too tight and sm=6 too round
-   for a 24px avatar. Promote to a token if more avatar sizes show up. */
-.site-icon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 24px;
-  height: 24px;
-  border-radius: 4px;
-  background: var(--wpds-color-bg-surface-neutral-weak);
-  color: var(--wpds-color-fg-content-neutral-weak);
-  font-size: var(--wpds-typography-font-size-xs);
-  font-weight: var(--wpds-typography-font-weight-medium);
-  overflow: hidden;
-  flex-shrink: 0;
-}
-
-.site-icon img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.avatar-trigger {
-  appearance: none;
-  background: none;
-  border: none;
-  padding: 0;
-  cursor: pointer;
-  border-radius: 50%;
-  display: flex;
-  transition: opacity 0.15s;
-}
-
-.avatar-trigger:hover {
-  opacity: 0.8;
-}
-
-.avatar {
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-}
-
-.avatar-menu {
-  min-width: 160px;
-  padding: var(--wpds-dimension-padding-xs);
-}
-
-.avatar-menu-name {
-  display: block;
-  color: var(--wpds-color-fg-content-neutral-weak);
-  padding: var(--wpds-dimension-padding-xs) var(--wpds-dimension-padding-sm);
-  margin-bottom: var(--wpds-dimension-gap-xs);
-}
-
-.avatar-menu-action {
-  width: 100%;
-  justify-content: flex-start;
-  margin: 0;
+  max-width: 100%;
 }
 
 /* Workspace: resizable panels */
@@ -387,39 +330,6 @@ body {
   display: flex;
   flex-direction: column;
   min-width: 0;
-}
-
-/* Panel header — standardized bar with start/end slots */
-
-.panel-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--wpds-dimension-gap-md);
-  padding: var(--wpds-dimension-padding-sm) var(--wpds-dimension-padding-lg);
-  border-bottom: var(--wpds-border-width-xs) solid var(--wpds-color-stroke-surface-neutral-weak);
-  flex-shrink: 0;
-  min-height: 0;
-}
-
-.panel-header-start {
-  display: flex;
-  align-items: center;
-  gap: var(--wpds-dimension-gap-sm);
-  min-width: 0;
-}
-
-.panel-header-start > .page-title {
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.panel-header-end {
-  display: flex;
-  align-items: center;
-  gap: var(--wpds-dimension-gap-xs);
-  flex-shrink: 0;
 }
 
 /* Resize handles */
@@ -492,77 +402,9 @@ body {
   margin-bottom: var(--wpds-dimension-gap-sm);
 }
 
-.home-site-icon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 24px;
-  height: 24px;
-  border-radius: var(--wpds-border-radius-xs);
-  background: var(--wpds-color-bg-surface-neutral-weak);
-  color: var(--wpds-color-fg-content-neutral-weak);
-  font-size: 12px;
-  font-weight: var(--wpds-typography-font-weight-bold);
-  flex-shrink: 0;
-  overflow: hidden;
-}
-
-.home-site-icon img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
 .home-site-posts {
   display: flex;
   flex-direction: column;
-}
-
-.home-post-item {
-  display: flex;
-  align-items: center;
-  gap: var(--wpds-dimension-gap-sm);
-  padding: var(--wpds-dimension-padding-xs) var(--wpds-dimension-padding-sm);
-  margin: 0 calc(-1 * var(--wpds-dimension-padding-sm));
-  background: none;
-  border: none;
-  border-radius: var(--wpds-border-radius-sm);
-  font: inherit;
-  color: inherit;
-  cursor: pointer;
-  text-align: left;
-  transition: background-color var(--motion-duration-quick) var(--motion-easing-default);
-}
-
-.home-post-item:hover {
-  background: var(--wpds-color-bg-surface-neutral-weak);
-}
-
-.home-post-avatar {
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  flex-shrink: 0;
-}
-
-.home-post-body {
-  flex: 1;
-  min-width: 0;
-}
-
-.home-post-title {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.home-post-meta {
-  color: var(--wpds-color-fg-content-neutral-weak);
-}
-
-.home-post-time::before {
-  content: '·';
-  margin: 0 0.4em;
 }
 
 .sidebar-search {
@@ -631,11 +473,6 @@ body {
   overflow-y: auto;
   padding: 0 var(--wpds-dimension-padding-xs);
   padding-bottom: var(--wpds-dimension-padding-sm);
-}
-
-.sidebar-empty {
-  padding: var(--wpds-dimension-padding-lg) var(--wpds-dimension-padding-sm);
-  text-align: center;
 }
 
 /* Sidebar groups */
@@ -814,34 +651,6 @@ body {
   flex-direction: column;
   gap: var(--wpds-dimension-gap-sm);
   padding: var(--wpds-dimension-padding-md);
-}
-
-/* Sync status */
-
-.sync-status {
-  flex-shrink: 0;
-  padding: var(--wpds-dimension-padding-sm);
-  border-top: var(--wpds-border-width-xs) solid var(--wpds-color-stroke-surface-neutral-weak);
-  text-align: center;
-}
-
-.sync-status-bar {
-  height: 3px;
-  border-radius: 2px;
-  background: var(--wpds-color-bg-neutral-secondary);
-  overflow: hidden;
-  margin-bottom: var(--wpds-dimension-padding-xs);
-}
-
-.sync-status-fill {
-  height: 100%;
-  background: var(--wpds-color-bg-brand-primary);
-  border-radius: 2px;
-  transition: width 0.3s ease;
-}
-
-.sync-status-label {
-  color: var(--wpds-color-fg-content-neutral-weak);
 }
 
 /* Feed */
@@ -1159,6 +968,21 @@ body {
   cursor: default;
 }
 
+.post-summary-retry {
+  appearance: none;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--wpds-color-fg-content-brand);
+  font-size: inherit;
+  padding: 0;
+  text-decoration: underline;
+}
+
+.post-summary-retry:hover {
+  color: var(--wpds-color-fg-content-brand-strong);
+}
+
 .post-summary-text {
   color: var(--wpds-color-fg-content-neutral);
   line-height: 1.6;
@@ -1265,47 +1089,6 @@ body {
   gap: var(--wpds-dimension-gap-sm);
   padding: var(--wpds-dimension-padding-sm) var(--wpds-dimension-padding-lg);
   background: var(--wpds-color-bg-surface-neutral-weak);
-}
-
-.like-button {
-  appearance: none;
-  background: none;
-  border: none;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  gap: var(--wpds-dimension-gap-xs);
-  padding: 0;
-  font-family: var(--wpds-typography-font-family-body);
-  font-size: var(--wpds-typography-font-size-md);
-  color: var(--wpds-color-fg-content-neutral-weak);
-  transition: color 0.15s;
-}
-
-.like-button:hover {
-  color: var(--wpds-color-fg-content-neutral);
-}
-
-.like-button.is-liked {
-  color: #e25555;
-}
-
-.like-button.is-liked:hover {
-  color: #c94444;
-}
-
-.like-button:disabled {
-  opacity: 0.6;
-  cursor: default;
-}
-
-.like-icon {
-  font-size: 1.1em;
-  line-height: 1;
-}
-
-.like-count {
-  font-weight: var(--wpds-typography-font-weight-medium);
 }
 
 /* Comments drawer */
@@ -1433,43 +1216,6 @@ body {
 
 /* ── Save button (posts) ── */
 
-.save-button {
-  appearance: none;
-  background: none;
-  border: var(--wpds-border-width-xs) solid var(--wpds-color-stroke-surface-neutral-weak);
-  border-radius: var(--wpds-border-radius-sm);
-  padding: var(--wpds-dimension-padding-xs) var(--wpds-dimension-padding-sm);
-  display: inline-flex;
-  align-items: center;
-  gap: var(--wpds-dimension-gap-xs);
-  font-size: var(--wpds-typography-font-size-sm);
-  color: var(--wpds-color-fg-content-neutral-weak);
-  cursor: pointer;
-  transition:
-    color var(--motion-duration-quick) ease,
-    border-color var(--motion-duration-quick) ease;
-}
-
-.save-button:hover {
-  color: var(--wpds-color-fg-content-neutral);
-  border-color: var(--wpds-color-stroke-surface-neutral);
-}
-
-.save-button.is-saved {
-  color: #3b82f6;
-  border-color: #3b82f6;
-}
-
-.save-button.is-saved:hover {
-  color: #2563eb;
-  border-color: #2563eb;
-}
-
-.save-button:disabled {
-  opacity: 0.6;
-  cursor: default;
-}
-
 /* ── Save button (comments) ── */
 
 .comment-header {
@@ -1517,6 +1263,21 @@ body {
 .saved-canvas {
   width: 100%;
   height: 100%;
+  position: relative;
+  background: color-mix(in srgb, var(--wpds-color-bg-surface-neutral) 85%, black);
+}
+
+.canvas-grid-bg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.saved-canvas .react-flow {
+  z-index: 1;
 }
 
 .saved-canvas-empty {
@@ -1600,6 +1361,11 @@ body {
   margin-bottom: var(--wpds-dimension-gap-sm);
 }
 
+.canvas-card-body,
+.canvas-card-body * {
+  pointer-events: none;
+}
+
 .canvas-card-body {
   font-size: var(--wpds-typography-font-size-sm);
   line-height: 1.6;
@@ -1648,14 +1414,49 @@ body {
   border-radius: 3px;
 }
 
+/* Group regions */
+
+.canvas-group-region {
+  border: 1px solid;
+  border-radius: var(--wpds-border-radius-md);
+  position: relative;
+}
+
+.canvas-group-label {
+  position: absolute;
+  top: 6px;
+  left: 12px;
+  font-size: 11px;
+  font-weight: var(--wpds-typography-font-weight-medium);
+  color: var(--wpds-color-fg-content-neutral-weak);
+  letter-spacing: 0.03em;
+  pointer-events: none;
+}
+
 /* React Flow overrides */
 
 .saved-canvas .react-flow__pane {
+  cursor: default;
+  background: transparent !important;
+}
+
+.saved-canvas .react-flow__node {
+  cursor: pointer;
+}
+
+.saved-canvas .react-flow__node.selected {
   cursor: grab;
 }
 
-.saved-canvas .react-flow__pane:active {
+.saved-canvas .react-flow__node.selected:active {
   cursor: grabbing;
+}
+
+.saved-canvas .react-flow__node.selected .canvas-card {
+  border-color: #3b82f6;
+  box-shadow:
+    0 0 0 1px #3b82f6,
+    0 2px 8px rgba(59, 130, 246, 0.15);
 }
 
 .saved-canvas .react-flow__node {

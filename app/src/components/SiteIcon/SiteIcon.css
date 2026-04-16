@@ -1,0 +1,22 @@
+/* 4px radius is intentional; WPDS's xs=2 is too tight and sm=6 too round
+   for a 24px avatar. Promote to a token if more avatar sizes show up. */
+.site-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
+  background: var(--wpds-color-bg-surface-neutral-weak);
+  color: var(--wpds-color-fg-content-neutral-weak);
+  font-size: var(--wpds-typography-font-size-xs);
+  font-weight: var(--wpds-typography-font-weight-medium);
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.site-icon img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}

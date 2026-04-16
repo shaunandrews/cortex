@@ -1,0 +1,35 @@
+.tab-nav {
+  display: flex;
+  align-items: center;
+  gap: var(--wpds-dimension-gap-sm);
+}
+
+.tab-nav-item {
+  display: inline-flex;
+  align-items: center;
+  min-height: 32px;
+  padding: var(--wpds-dimension-padding-xs) var(--wpds-dimension-padding-md);
+  border-radius: var(--wpds-border-radius-sm);
+  color: var(--wpds-color-fg-content-neutral-weak);
+  text-decoration: none;
+  cursor: pointer;
+  transition:
+    background-color var(--motion-duration-quick) var(--motion-easing-default),
+    color var(--motion-duration-quick) var(--motion-easing-default);
+  outline: none;
+}
+
+.tab-nav-item:hover {
+  background: var(--wpds-color-bg-interactive-neutral-weak-active);
+  color: var(--wpds-color-fg-content-neutral);
+}
+
+.tab-nav-item:focus-visible {
+  outline: 2px solid var(--wpds-color-stroke-focus-brand);
+  outline-offset: -2px;
+}
+
+.tab-nav-item.is-active {
+  background: var(--wpds-color-bg-interactive-brand-weak-active);
+  color: var(--wpds-color-fg-content-neutral);
+}

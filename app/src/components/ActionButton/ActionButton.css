@@ -1,0 +1,60 @@
+.action-button {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--wpds-dimension-gap-xs);
+  padding: var(--wpds-dimension-padding-xs) var(--wpds-dimension-padding-sm);
+  border: none;
+  background: none;
+  color: var(--wpds-color-fg-content-neutral-weak);
+  font: inherit;
+  cursor: pointer;
+  border-radius: var(--wpds-border-radius-sm);
+  transition:
+    background-color var(--motion-duration-quick) var(--motion-easing-default),
+    color var(--motion-duration-quick) var(--motion-easing-default);
+  outline: none;
+}
+
+.action-button:hover {
+  background: var(--wpds-color-bg-interactive-neutral-weak-active);
+  color: var(--wpds-color-fg-content-neutral);
+}
+
+.action-button:focus-visible {
+  outline: 2px solid var(--wpds-color-stroke-focus-brand);
+  outline-offset: -2px;
+}
+
+.action-button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+/* Active state (persistent, e.g. liked / saved) */
+
+.action-button.is-active {
+  color: var(--wpds-color-fg-content-neutral);
+}
+
+.action-button--danger.is-active {
+  color: var(--wpds-color-fg-interactive-error-strong);
+}
+
+.action-button--danger.is-active:hover {
+  color: var(--wpds-color-fg-interactive-error-strong);
+  background: var(--wpds-color-bg-interactive-error-weak-active);
+}
+
+/* Icon + label layout */
+
+.action-button-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.action-button-label {
+  font-size: var(--wpds-typography-font-size-sm);
+  font-variant-numeric: tabular-nums;
+}

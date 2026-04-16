@@ -1,6 +1,13 @@
 import { useState, useEffect, useRef } from 'react';
 import { Icon, IconButton, Text } from '@wordpress/ui';
-import { closeSmall, chevronUp, comment as commentIcon, archive } from '@wordpress/icons';
+import {
+  closeSmall,
+  chevronUp,
+  comment as commentIcon,
+  archive,
+  starFilled,
+  starEmpty,
+} from '@wordpress/icons';
 import { useP2Post } from '../hooks/useP2Post';
 import { useP2Sites } from '../hooks/useP2Sites';
 import { usePostComments } from '../hooks/usePostComments';
@@ -10,6 +17,7 @@ import { useMarkAsSeen } from '../hooks/useMarkAsSeen';
 import { useSavedLookup, useSavePost, useSaveComment, useUnsaveItem } from '../saved/useSavedItems';
 import { relativeTime } from '../lib/relativeTime';
 import Markdown from 'react-markdown';
+import { ActionButton, PanelHeader } from '../components';
 
 function decodeEntities(text: string): string {
   const el = document.createElement('textarea');
@@ -31,6 +39,7 @@ export default function PostDetailPanel({ siteId, postId, onClose }: PostDetailP
   const {
     summary,
     isLoading: summaryLoading,
+    error: summaryError,
     regenerate: regenerateSummary,
   } = usePostSummary(siteId, postId, post?.content);
 
@@ -90,13 +99,13 @@ export default function PostDetailPanel({ siteId, postId, onClose }: PostDetailP
 
   return (
     <div className="post-detail">
-      <header className="panel-header">
-        <div className="panel-header-start">
+      <PanelHeader
+        start={
           <Text variant="body-sm" className="post-detail-header-title">
             {decodeEntities(post.title)}
           </Text>
-        </div>
-        <div className="panel-header-end">
+        }
+        end={
           <IconButton
             variant="minimal"
             tone="neutral"
@@ -105,8 +114,8 @@ export default function PostDetailPanel({ siteId, postId, onClose }: PostDetailP
             label="Close"
             onClick={onClose}
           />
-        </div>
-      </header>
+        }
+      />
       <article className="post-detail-article">
         <Text variant="heading-2xl" render={<h1 />} className="post-detail-title page-title">
           {post.title}
@@ -135,7 +144,7 @@ export default function PostDetailPanel({ siteId, postId, onClose }: PostDetailP
             </div>
           ) : null;
         })()}
-        {(summary || summaryLoading) && (
+        {(summary || summaryLoading || summaryError) && (
           <div className="post-summary">
             <div className="post-summary-header">
               <Text variant="body-sm" className="post-summary-label">
@@ -154,6 +163,16 @@ export default function PostDetailPanel({ siteId, postId, onClose }: PostDetailP
               <div className="post-summary-text">
                 <Markdown>{summary}</Markdown>
               </div>
+            ) : summaryError ? (
+              <Text
+                variant="body-sm"
+                style={{ color: 'var(--wpds-color-fg-content-neutral-weak)' }}
+              >
+                {summaryError}{' '}
+                <button className="post-summary-retry" onClick={regenerateSummary}>
+                  Retry
+                </button>
+              </Text>
             ) : (
               <Text
                 variant="body-sm"
@@ -173,16 +192,19 @@ export default function PostDetailPanel({ siteId, postId, onClose }: PostDetailP
 
       <footer className={`post-detail-footer${commentsOpen ? ' is-open' : ''}`}>
         <div className="post-detail-footer-bar">
-          <button
-            className={`like-button${post.i_like ? ' is-liked' : ''}`}
+          <ActionButton
+            icon={<Icon icon={post.i_like ? starFilled : starEmpty} size={20} />}
+            variant="danger"
+            isActive={!!post.i_like}
             onClick={() => toggleLike.mutate(!!post.i_like)}
             disabled={toggleLike.isPending}
+            aria-label={post.i_like ? 'Unlike' : 'Like'}
           >
-            <span className="like-icon">{post.i_like ? '♥' : '♡'}</span>
-            {(post.like_count ?? 0) > 0 && <span className="like-count">{post.like_count}</span>}
-          </button>
-          <button
-            className={`save-button${isSaved ? ' is-saved' : ''}`}
+            {(post.like_count ?? 0) > 0 ? post.like_count : null}
+          </ActionButton>
+          <ActionButton
+            icon={<Icon icon={archive} size={20} />}
+            isActive={isSaved}
             onClick={() => {
               if (isSaved) {
                 unsaveItem.mutate(savedId);
@@ -197,9 +219,8 @@ export default function PostDetailPanel({ siteId, postId, onClose }: PostDetailP
             }}
             disabled={savePost.isPending || unsaveItem.isPending}
           >
-            <Icon icon={archive} size={16} />
-            <span>{isSaved ? 'Saved' : 'Save'}</span>
-          </button>
+            {isSaved ? 'Saved' : 'Save'}
+          </ActionButton>
           {commentsData && commentsData.comments.length > 0 && (
             <button
               className="comments-drawer-toggle"

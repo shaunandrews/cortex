@@ -18,6 +18,7 @@ import PostDetailPanel from './PostDetailPanel';
 import SavedCollection from '../saved/SavedCollection';
 import AppHeader from './AppHeader';
 import Sidebar from './sidebar/Sidebar';
+import { PanelHeader, SyncStatusBar } from '../components';
 
 function decodeEntities(text: string): string {
   const el = document.createElement('textarea');
@@ -41,36 +42,14 @@ function extractImages(html: string): string[] {
     );
 }
 
-function SyncStatusBar() {
+function SidebarSyncStatus() {
   const { phase, progress, lastPollAt } = useSyncStatus();
-
-  if (phase === 'idle') return null;
-
-  let label = '';
-  if (phase === 'bootstrapping') {
-    label = 'Connecting…';
-  } else if (phase === 'prefetching') {
-    label = `Syncing ${progress.fetched} of ${progress.total} sites`;
-  } else if (phase === 'maintaining') {
-    label = lastPollAt
-      ? `Live · Updated ${relativeTime(new Date(lastPollAt).toISOString())}`
-      : 'Live';
-  }
-
-  const showProgress = phase === 'prefetching' && progress.total > 0;
-  const pct = showProgress ? (progress.fetched / progress.total) * 100 : 0;
-
   return (
-    <div className="sync-status">
-      {showProgress && (
-        <div className="sync-status-bar">
-          <div className="sync-status-fill" style={{ width: `${pct}%` }} />
-        </div>
-      )}
-      <Text variant="body-sm" className="sync-status-label">
-        {label}
-      </Text>
-    </div>
+    <SyncStatusBar
+      phase={phase}
+      progress={progress}
+      lastUpdatedLabel={lastPollAt ? relativeTime(new Date(lastPollAt).toISOString()) : undefined}
+    />
   );
 }
 
@@ -222,68 +201,74 @@ export default function AuthedHome() {
 
         return (
           <>
-            {selectedSiteId && (
-              <header className="panel-header">
-                <div className="panel-header-start">
-                  <Text variant="heading-lg" render={<h2 />} className="page-title">
-                    {selectedSite?.name ?? ''}
-                  </Text>
-                </div>
-                <div className="panel-header-end">
-                  {selectedSite &&
-                    (unseenMap.get(selectedSite.ID) ?? 0) > 0 &&
-                    (() => {
-                      const sub = following?.find((s) => Number(s.blog_ID) === selectedSite.ID);
-                      return sub ? (
+            {selectedSiteId &&
+              (() => {
+                const sub = following?.find((s) => Number(s.blog_ID) === selectedSite?.ID);
+                const hasUnread = selectedSite && (unseenMap.get(selectedSite.ID) ?? 0) > 0;
+                return (
+                  <PanelHeader
+                    start={
+                      <Text variant="heading-lg" render={<h2 />} className="page-title">
+                        {selectedSite?.name ?? ''}
+                      </Text>
+                    }
+                    end={
+                      <>
+                        {hasUnread && sub && (
+                          <IconButton
+                            variant="minimal"
+                            tone="neutral"
+                            size="compact"
+                            icon={check}
+                            label="Mark all as read"
+                            onClick={() =>
+                              markAllAsSeen.mutate({
+                                feedId: Number(sub.feed_ID),
+                                blogId: selectedSite.ID,
+                              })
+                            }
+                          />
+                        )}
+                        {selectedSite && (
+                          <IconButton
+                            variant="minimal"
+                            tone="neutral"
+                            size="compact"
+                            icon={external}
+                            label="Open site"
+                            nativeButton={false}
+                            render={
+                              <a
+                                href={selectedSite.URL}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                              />
+                            }
+                          />
+                        )}
+                        {selectedSite && (
+                          <IconButton
+                            variant="minimal"
+                            tone="neutral"
+                            size="compact"
+                            icon={starredIds.has(selectedSite.ID) ? starFilled : starEmpty}
+                            label={starredIds.has(selectedSite.ID) ? 'Unfavorite' : 'Favorite'}
+                            onClick={() => toggleFavorite(selectedSite.ID)}
+                          />
+                        )}
                         <IconButton
                           variant="minimal"
                           tone="neutral"
                           size="compact"
-                          icon={check}
-                          label="Mark all as read"
-                          onClick={() =>
-                            markAllAsSeen.mutate({
-                              feedId: Number(sub.feed_ID),
-                              blogId: selectedSite.ID,
-                            })
-                          }
+                          icon={rotateRight}
+                          label="Refresh"
+                          onClick={() => refetchPosts()}
                         />
-                      ) : null;
-                    })()}
-                  {selectedSite && (
-                    <IconButton
-                      variant="minimal"
-                      tone="neutral"
-                      size="compact"
-                      icon={external}
-                      label="Open site"
-                      nativeButton={false}
-                      render={
-                        <a href={selectedSite.URL} target="_blank" rel="noopener noreferrer" />
-                      }
-                    />
-                  )}
-                  {selectedSite && (
-                    <IconButton
-                      variant="minimal"
-                      tone="neutral"
-                      size="compact"
-                      icon={starredIds.has(selectedSite.ID) ? starFilled : starEmpty}
-                      label={starredIds.has(selectedSite.ID) ? 'Unfavorite' : 'Favorite'}
-                      onClick={() => toggleFavorite(selectedSite.ID)}
-                    />
-                  )}
-                  <IconButton
-                    variant="minimal"
-                    tone="neutral"
-                    size="compact"
-                    icon={rotateRight}
-                    label="Refresh"
-                    onClick={() => refetchPosts()}
+                      </>
+                    }
                   />
-                </div>
-              </header>
-            )}
+                );
+              })()}
             {!selectedSiteId ? (
               <div className="feed-empty">
                 <Text
@@ -524,7 +509,7 @@ export default function AuthedHome() {
             onCreateP2={() => setCreateOpen(true)}
             onOpenSite={handleOpenSite}
             onMarkAllRead={handleMarkAllRead}
-            footer={<SyncStatusBar />}
+            footer={<SidebarSyncStatus />}
           />
         </Panel>
 

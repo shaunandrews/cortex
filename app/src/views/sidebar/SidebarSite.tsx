@@ -2,7 +2,7 @@ import { type MouseEvent } from 'react';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import type { WPComSite } from '../../api/types';
-import { MenuItem } from '../../components';
+import { MenuItem, SiteIcon } from '../../components';
 
 type Props = {
   site: WPComSite;
@@ -40,15 +40,7 @@ export default function SidebarSite({
     <MenuItem
       ref={setNodeRef}
       className={isDragging ? 'is-dragging' : undefined}
-      icon={
-        <span className="site-icon">
-          {site.icon?.img ? (
-            <img src={site.icon.img} alt="" />
-          ) : (
-            <span>{site.name.charAt(0).toUpperCase()}</span>
-          )}
-        </span>
-      }
+      icon={<SiteIcon name={site.name} src={site.icon?.img} />}
       label={site.name}
       count={unseen}
       isSelected={isSelected}

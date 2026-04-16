@@ -7,6 +7,7 @@ import { useRouteState } from '../hooks/useRouteState';
 import { isXPost } from '../lib/xpost';
 import { relativeTime } from '../lib/relativeTime';
 import type { WPComSite } from '../api/types';
+import { EmptyState, PostRowCard, SiteIcon } from '../components';
 
 function decodeEntities(text: string): string {
   const el = document.createElement('textarea');
@@ -29,37 +30,21 @@ function HomeSitePosts({
   return (
     <div className="home-site-section">
       <div className="home-site-header">
-        <div className="home-site-icon">
-          {site.icon?.img ? (
-            <img src={site.icon.img} alt="" />
-          ) : (
-            <span>{decodeEntities(site.name).charAt(0).toUpperCase()}</span>
-          )}
-        </div>
+        <SiteIcon name={decodeEntities(site.name)} src={site.icon?.img} />
         <Text variant="heading-lg" render={<h2 />} className="home-site-name">
           {decodeEntities(site.name)}
         </Text>
       </div>
       <div className="home-site-posts">
         {posts.map((post) => (
-          <button
+          <PostRowCard
             key={post.ID}
-            className="home-post-item"
+            title={decodeEntities(post.title)}
+            author={post.author?.name}
+            authorAvatar={post.author?.avatar_URL}
+            date={relativeTime(post.date)}
             onClick={() => onSelectPost(site.ID, post.ID)}
-          >
-            {post.author?.avatar_URL && (
-              <img src={post.author.avatar_URL} alt="" className="home-post-avatar" />
-            )}
-            <div className="home-post-body">
-              <Text variant="body-md" className="home-post-title">
-                {decodeEntities(post.title)}
-              </Text>
-              <Text variant="body-sm" className="home-post-meta">
-                {post.author?.name}
-                <span className="home-post-time">{relativeTime(post.date)}</span>
-              </Text>
-            </div>
-          </button>
+          />
         ))}
       </div>
     </div>
@@ -87,9 +72,10 @@ export default function HomeView() {
             ))}
           </div>
         ) : (
-          <Text variant="body-lg" style={{ color: 'var(--wpds-color-fg-content-neutral-weak)' }}>
-            Star some sites to see recent posts here.
-          </Text>
+          <EmptyState
+            title="No favorites yet"
+            message="Star sites in the sidebar to see recent posts from them here."
+          />
         )}
       </div>
     </div>

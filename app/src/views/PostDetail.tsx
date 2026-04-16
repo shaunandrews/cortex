@@ -1,12 +1,14 @@
 import { useParams, useNavigate, Navigate } from 'react-router-dom';
-import { Button, Icon, Text, Popover, VisuallyHidden } from '@wordpress/ui';
-import { wordpress } from '@wordpress/icons';
+import { Button, Icon, IconButton, Text } from '@wordpress/ui';
+import { chevronLeft, starFilled, starEmpty } from '@wordpress/icons';
 import { useAuth } from '../auth/AuthContext';
+import { automattic } from '../icons/automattic';
 import { useP2Post } from '../hooks/useP2Post';
 import { useP2Sites } from '../hooks/useP2Sites';
 import { usePostComments } from '../hooks/usePostComments';
 import { useToggleLike } from '../hooks/useToggleLike';
 import { relativeTime } from '../lib/relativeTime';
+import { ActionButton, AvatarButton } from '../components';
 
 export default function PostDetail() {
   const { siteId, postId } = useParams();
@@ -42,44 +44,44 @@ export default function PostDetail() {
   return (
     <div className="authed-layout">
       <header className="header">
-        <div className="header-brand">
-          <Button
+        <div className="header-left">
+          <IconButton
             variant="minimal"
             tone="neutral"
             size="compact"
+            icon={chevronLeft}
+            label="Back"
             onClick={() => navigate(-1)}
-            className="back-button"
-          >
-            &larr;
-          </Button>
-          <Icon icon={wordpress} size={20} />
-          <Text variant="heading-lg" className="header-wordmark">
-            Cortex
-          </Text>
+          />
+          <div className="header-brand">
+            <Icon icon={automattic} size={20} />
+            <Text variant="heading-lg" className="header-wordmark">
+              Cortex
+            </Text>
+          </div>
         </div>
         {user && (
-          <Popover.Root>
-            <Popover.Trigger render={<button className="avatar-trigger" />}>
-              <img src={user.avatar_URL} alt={user.display_name} className="avatar" />
-            </Popover.Trigger>
-            <Popover.Popup align="end" sideOffset={4} className="avatar-menu">
-              <VisuallyHidden>
-                <Popover.Title>Account menu</Popover.Title>
-              </VisuallyHidden>
-              <Text variant="body-sm" className="avatar-menu-name">
-                {user.display_name}
-              </Text>
-              <Button
-                variant="minimal"
-                tone="neutral"
-                size="compact"
-                onClick={logout}
-                className="avatar-menu-action"
-              >
-                Sign out
-              </Button>
-            </Popover.Popup>
-          </Popover.Root>
+          <AvatarButton
+            src={user.avatar_URL}
+            alt={user.display_name}
+            menuTitle="Account menu"
+            menu={
+              <>
+                <Text variant="body-sm" className="avatar-menu-name">
+                  {user.display_name}
+                </Text>
+                <Button
+                  variant="minimal"
+                  tone="neutral"
+                  size="compact"
+                  onClick={logout}
+                  className="avatar-menu-action"
+                >
+                  Sign out
+                </Button>
+              </>
+            }
+          />
         )}
       </header>
 
@@ -126,16 +128,16 @@ export default function PostDetail() {
             />
 
             <div className="post-detail-actions">
-              <button
-                className={`like-button${post.i_like ? ' is-liked' : ''}`}
+              <ActionButton
+                icon={<Icon icon={post.i_like ? starFilled : starEmpty} size={20} />}
+                variant="danger"
+                isActive={!!post.i_like}
                 onClick={() => toggleLike.mutate(!!post.i_like)}
                 disabled={toggleLike.isPending}
+                aria-label={post.i_like ? 'Unlike' : 'Like'}
               >
-                <span className="like-icon">{post.i_like ? '♥' : '♡'}</span>
-                {(post.like_count ?? 0) > 0 && (
-                  <span className="like-count">{post.like_count}</span>
-                )}
-              </button>
+                {(post.like_count ?? 0) > 0 ? post.like_count : null}
+              </ActionButton>
             </div>
 
             {commentsData && commentsData.comments.length > 0 && (
