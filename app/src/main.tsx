@@ -1,41 +1,35 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
-import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
-import type { Persister } from '@tanstack/react-query-persist-client';
-import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
+import { QueryClientProvider } from '@tanstack/react-query';
 import { queryClient } from './lib/queryClient';
 import { AuthProvider } from './auth/AuthContext';
+import { SyncProvider } from './sync/SyncProvider';
+import { ThemeWrapper } from './ThemeWrapper';
 import App from './App';
+import '@wordpress/theme/design-tokens.css';
 import './App.css';
 
-const CACHE_KEY = 'cortex-query-cache';
-
-const persister: Persister = {
-  persistClient: (client) => {
-    localStorage.setItem(CACHE_KEY, JSON.stringify(client));
-  },
-  restoreClient: () => {
-    const data = localStorage.getItem(CACHE_KEY);
-    return data ? JSON.parse(data) : undefined;
-  },
-  removeClient: () => {
-    localStorage.removeItem(CACHE_KEY);
-  },
-};
+// Clean up old localStorage cache from PersistQueryClientProvider
+const OLD_CACHE_KEY = 'cortex-query-cache';
+const OLD_VERSION_KEY = 'cortex-cache-version';
+if (localStorage.getItem(OLD_CACHE_KEY)) {
+  localStorage.removeItem(OLD_CACHE_KEY);
+  localStorage.removeItem(OLD_VERSION_KEY);
+}
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <PersistQueryClientProvider
-      client={queryClient}
-      persistOptions={{ persister, maxAge: 30 * 60 * 1000 }}
-    >
+    <QueryClientProvider client={queryClient}>
       <BrowserRouter>
-        <AuthProvider>
-          <App />
-          <ReactQueryDevtools initialIsOpen={false} />
-        </AuthProvider>
+        <ThemeWrapper>
+          <AuthProvider>
+            <SyncProvider>
+              <App />
+            </SyncProvider>
+          </AuthProvider>
+        </ThemeWrapper>
       </BrowserRouter>
-    </PersistQueryClientProvider>
+    </QueryClientProvider>
   </StrictMode>,
 );
