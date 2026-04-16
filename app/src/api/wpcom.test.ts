@@ -24,6 +24,7 @@ describe('getMe', () => {
     const user = await getMe('test-token');
 
     expect(fetch).toHaveBeenCalledWith('https://public-api.wordpress.com/rest/v1.1/me', {
+      method: 'GET',
       headers: { Authorization: 'Bearer test-token' },
     });
     expect(user.display_name).toBe('Test User');

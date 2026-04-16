@@ -43,14 +43,22 @@ export function Button({
   children,
   onClick,
   style,
+  className,
+  title,
+  disabled,
 }: {
   children: ReactNode;
   onClick?: () => void;
   variant?: string;
+  tone?: string;
+  size?: string;
   style?: React.CSSProperties;
+  className?: string;
+  title?: string;
+  disabled?: boolean;
 }) {
   return (
-    <button onClick={onClick} style={style}>
+    <button onClick={onClick} style={style} className={className} title={title} disabled={disabled}>
       {children}
     </button>
   );
@@ -58,6 +66,28 @@ export function Button({
 
 export function Icon({ size }: { icon: unknown; size?: number }) {
   return <span data-testid="icon" style={{ fontSize: size }} />;
+}
+
+export function IconButton({
+  onClick,
+  label,
+  disabled,
+  className,
+}: {
+  onClick?: () => void;
+  icon?: unknown;
+  label: string;
+  variant?: string;
+  tone?: string;
+  size?: string;
+  disabled?: boolean;
+  className?: string;
+}) {
+  return (
+    <button onClick={onClick} aria-label={label} className={className} disabled={disabled}>
+      <span data-testid="icon" />
+    </button>
+  );
 }
 
 export function Link({ children, href }: { children: ReactNode; href: string; tone?: string }) {

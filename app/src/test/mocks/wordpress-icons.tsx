@@ -1,1 +1,9 @@
 export const wordpress = 'wordpress-icon';
+export const check = 'check-icon';
+export const starFilled = 'star-filled-icon';
+export const starEmpty = 'star-empty-icon';
+export const rotateRight = 'rotate-right-icon';
+export const closeSmall = 'close-small-icon';
+export const chevronUp = 'chevron-up-icon';
+export const comment = 'comment-icon';
+export const external = 'external-icon';

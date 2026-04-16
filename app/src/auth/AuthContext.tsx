@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react';
 import { getMe } from '../api/wpcom';
+import { queryClient } from '../lib/queryClient';
 import type { WPComUser } from '../api/types';
 
 interface AuthState {
@@ -18,7 +19,7 @@ const TOKEN_KEY = 'cortex_token';
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [token, setToken] = useState<string | null>(null);
   const [user, setUser] = useState<WPComUser | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(() => !!localStorage.getItem(TOKEN_KEY));
 
   const login = useCallback(async (newToken: string) => {
     try {
@@ -38,21 +39,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.removeItem(TOKEN_KEY);
     setToken(null);
     setUser(null);
+    queryClient.clear();
   }, []);
 
-  // Check for existing token on mount
+  // Validate stored token on mount
   useEffect(() => {
     const stored = localStorage.getItem(TOKEN_KEY);
-    if (stored) {
-      login(stored)
-        .catch(() => {
-          // Token was invalid, already cleaned up
-        })
-        .finally(() => setIsLoading(false));
-    } else {
-      setIsLoading(false);
-    }
-  }, [login]);
+    if (!stored) return;
+    let cancelled = false;
+    getMe(stored)
+      .then((me) => {
+        if (!cancelled) {
+          setToken(stored);
+          setUser(me);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) localStorage.removeItem(TOKEN_KEY);
+      })
+      .finally(() => {
+        if (!cancelled) setIsLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   return (
     <AuthContext.Provider
@@ -70,6 +81,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useAuth(): AuthState {
   const ctx = useContext(AuthContext);
   if (!ctx) throw new Error('useAuth must be used within AuthProvider');

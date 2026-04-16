@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Stack, Text, Link, Notice } from '@wordpress/ui';
 import { useAuth } from './AuthContext';
 
 export default function Callback() {
@@ -9,14 +10,12 @@ export default function Callback() {
 
   useEffect(() => {
     async function handleCallback() {
-      // Parse the hash fragment: #access_token=...&token_type=bearer&state=...
       const hash = window.location.hash.substring(1);
       const params = new URLSearchParams(hash);
 
       const accessToken = params.get('access_token');
       const state = params.get('state');
 
-      // Validate state
       const storedState = sessionStorage.getItem('cortex_oauth_state');
       sessionStorage.removeItem('cortex_oauth_state');
 
@@ -32,7 +31,9 @@ export default function Callback() {
 
       try {
         await login(accessToken);
-        navigate('/', { replace: true });
+        const returnTo = sessionStorage.getItem('cortex_return_to') || '/';
+        sessionStorage.removeItem('cortex_return_to');
+        navigate(returnTo, { replace: true });
       } catch {
         setError('Authentication failed');
       }
@@ -43,18 +44,23 @@ export default function Callback() {
 
   if (error) {
     return (
-      <div className="container">
-        <p style={{ color: '#ef4444' }}>{error}</p>
-        <a href="/" style={{ color: '#666', marginTop: 16 }}>
+      <Stack direction="column" align="center" justify="center" gap="lg" style={{ height: '100%' }}>
+        <Notice.Root intent="error" style={{ maxWidth: 'var(--wpds-dimension-surface-width-md)' }}>
+          <Notice.Title>Authentication Error</Notice.Title>
+          <Notice.Description>{error}</Notice.Description>
+        </Notice.Root>
+        <Link href="/" tone="neutral">
           Back to home
-        </a>
-      </div>
+        </Link>
+      </Stack>
     );
   }
 
   return (
-    <div className="container">
-      <p className="tagline">Authenticating…</p>
-    </div>
+    <Stack direction="column" align="center" justify="center" gap="md" style={{ height: '100%' }}>
+      <Text variant="body-lg" style={{ color: 'var(--wpds-color-fg-content-neutral-weak)' }}>
+        Authenticating...
+      </Text>
+    </Stack>
   );
 }

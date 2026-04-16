@@ -1,4 +1,7 @@
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route, Navigate } from 'react-router-dom';
+import { Stack, Text, Icon } from '@wordpress/ui';
+import { wordpress } from '@wordpress/icons';
+import { Agentation } from 'agentation';
 import { useAuth } from './auth/AuthContext';
 import Callback from './auth/Callback';
 import UnauthHome from './views/UnauthHome';
@@ -9,10 +12,10 @@ function Home() {
 
   if (isLoading) {
     return (
-      <div className="container">
-        <div className="logo">◈</div>
-        <p className="tagline">Loading…</p>
-      </div>
+      <Stack direction="column" align="center" justify="center" gap="md" style={{ height: '100%' }}>
+        <Icon icon={wordpress} size={48} />
+        <Text variant="body-lg">Loading...</Text>
+      </Stack>
     );
   }
 
@@ -21,9 +24,19 @@ function Home() {
 
 export default function App() {
   return (
-    <Routes>
-      <Route path="/" element={<Home />} />
-      <Route path="/callback" element={<Callback />} />
-    </Routes>
+    <>
+      <Routes>
+        <Route path="/" element={<Home />} />
+        <Route path="/site/:siteId" element={<Home />} />
+        <Route path="/site/:siteId/post/:postId" element={<Home />} />
+        <Route path="/unread" element={<Home />} />
+        <Route path="/unread/post/:detailSiteId/:postId" element={<Home />} />
+        <Route path="/liked" element={<Home />} />
+        <Route path="/liked/post/:detailSiteId/:postId" element={<Home />} />
+        <Route path="/callback" element={<Callback />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+      {import.meta.env.DEV && <Agentation />}
+    </>
   );
 }

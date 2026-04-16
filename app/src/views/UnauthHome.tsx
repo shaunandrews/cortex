@@ -1,7 +1,12 @@
+import { Button, Icon } from '@wordpress/ui';
+import { wordpress } from '@wordpress/icons';
+import NeuralConstellation from '../NeuralConstellation';
+
 export default function UnauthHome() {
   function handleConnect() {
     const state = crypto.randomUUID();
     sessionStorage.setItem('cortex_oauth_state', state);
+    sessionStorage.setItem('cortex_return_to', window.location.pathname);
 
     const params = new URLSearchParams({
       client_id: import.meta.env.VITE_WPCOM_CLIENT_ID,
@@ -15,13 +20,22 @@ export default function UnauthHome() {
   }
 
   return (
-    <div className="container">
-      <div className="logo">◈</div>
-      <h1>Cortex</h1>
-      <p className="tagline">The AI-native workspace for Automattic</p>
-      <button className="connect-btn" onClick={handleConnect}>
-        Connect with WordPress.com
-      </button>
-    </div>
+    <>
+      <NeuralConstellation />
+      <div className="unauth-home">
+        <div className="unauth-spacer-top" />
+        <div className="unauth-content">
+          <h1 className="unauth-title">Cortex</h1>
+          <p className="unauth-tagline">The AI-native workspace for Automattic</p>
+          <div className="unauth-cta">
+            <Button onClick={handleConnect}>
+              <Icon icon={wordpress} size={20} />
+              Connect with WordPress.com
+            </Button>
+          </div>
+        </div>
+        <div className="unauth-spacer-bottom" />
+      </div>
+    </>
   );
 }
