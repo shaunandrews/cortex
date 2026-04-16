@@ -24,5 +24,8 @@ export async function getMe(token: string): Promise<WPComUser> {
 }
 
 export async function getMySites(token: string): Promise<WPComSitesResponse> {
-  return apiFetch<WPComSitesResponse>('/me/sites?fields=ID,name,description,URL,icon,options', token);
+  return apiFetch<WPComSitesResponse>(
+    '/me/sites?fields=ID,name,description,URL,icon,options',
+    token,
+  );
 }

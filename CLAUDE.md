@@ -35,6 +35,11 @@ Use Port Keeper for the dev server port — see global CLAUDE.md.
 - `VITE_WPCOM_CLIENT_SECRET` — WP.com OAuth app client secret
 - `VITE_WPCOM_REDIRECT_URI` — OAuth callback URL (e.g. `http://localhost:5176/callback`)
 
+## Rules
+
+- **NEVER start, restart, or stop the dev server.** Shaun always has it running. Do not run `npm run dev`, `npx vite`, or anything that starts a server.
+- **NEVER open or control the browser.** Do not use chrome-devtools MCP tools. Do not navigate pages, take screenshots, or interact with the browser. If visual verification is needed, ask Shaun.
+
 ## Conventions
 
 - Plain CSS in `App.css` (no CSS modules, no Tailwind)

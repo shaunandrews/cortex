@@ -45,7 +45,9 @@ export default function Callback() {
     return (
       <div className="container">
         <p style={{ color: '#ef4444' }}>{error}</p>
-        <a href="/" style={{ color: '#666', marginTop: 16 }}>Back to home</a>
+        <a href="/" style={{ color: '#666', marginTop: 16 }}>
+          Back to home
+        </a>
       </div>
     );
   }

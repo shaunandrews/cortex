@@ -1,11 +1,11 @@
-import { Routes, Route } from 'react-router-dom'
-import { useAuth } from './auth/AuthContext'
-import Callback from './auth/Callback'
-import UnauthHome from './views/UnauthHome'
-import AuthedHome from './views/AuthedHome'
+import { Routes, Route } from 'react-router-dom';
+import { useAuth } from './auth/AuthContext';
+import Callback from './auth/Callback';
+import UnauthHome from './views/UnauthHome';
+import AuthedHome from './views/AuthedHome';
 
 function Home() {
-  const { isAuthed, isLoading } = useAuth()
+  const { isAuthed, isLoading } = useAuth();
 
   if (isLoading) {
     return (
@@ -13,10 +13,10 @@ function Home() {
         <div className="logo">◈</div>
         <p className="tagline">Loading…</p>
       </div>
-    )
+    );
   }
 
-  return isAuthed ? <AuthedHome /> : <UnauthHome />
+  return isAuthed ? <AuthedHome /> : <UnauthHome />;
 }
 
 export default function App() {
@@ -25,5 +25,5 @@ export default function App() {
       <Route path="/" element={<Home />} />
       <Route path="/callback" element={<Callback />} />
     </Routes>
-  )
+  );
 }
