@@ -29,10 +29,7 @@ export default function App() {
         <Route path="/" element={<Home />} />
         <Route path="/site/:siteId" element={<Home />} />
         <Route path="/site/:siteId/post/:postId" element={<Home />} />
-        <Route path="/unread" element={<Home />} />
-        <Route path="/unread/post/:detailSiteId/:postId" element={<Home />} />
-        <Route path="/liked" element={<Home />} />
-        <Route path="/liked/post/:detailSiteId/:postId" element={<Home />} />
+        <Route path="/site/:siteId/post/:detailSiteId/:postId" element={<Home />} />
         <Route path="/callback" element={<Callback />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

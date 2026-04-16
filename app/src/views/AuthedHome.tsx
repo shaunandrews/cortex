@@ -21,6 +21,7 @@ import {
   chevronUp,
   comment as commentIcon,
   external,
+  plus,
 } from '@wordpress/icons';
 import { useAuth } from '../auth/AuthContext';
 import { useP2Sites } from '../hooks/useP2Sites';
@@ -32,8 +33,7 @@ import { useStarredSites } from '../hooks/useStarredSites';
 import { useFollowing } from '../hooks/useFollowing';
 import { useMarkAsSeen, useMarkAllAsSeen } from '../hooks/useMarkAsSeen';
 import { useCreatePost } from '../hooks/useCreatePost';
-import { useReaderStream } from '../hooks/useReaderStream';
-import { useLikedPosts } from '../hooks/useLikedPosts';
+import { CreateP2Dialog } from './CreateP2Dialog';
 import { usePostSummary } from '../hooks/usePostSummary';
 import { relativeTime } from '../lib/relativeTime';
 import { useSyncStatus } from '../sync/SyncProvider';
@@ -120,11 +120,9 @@ export default function AuthedHome() {
     selectedSiteId,
     detailSiteId,
     detailPostId,
-    specialView,
     hasDetail,
     selectSite,
     selectPost,
-    selectSpecialView,
     closeDetail,
   } = useRouteState();
   const [searchQuery, setSearchQuery] = useState('');
@@ -133,6 +131,7 @@ export default function AuthedHome() {
     return (localStorage.getItem('cortex_site_sort') as 'alpha' | 'recent' | 'unread') || 'alpha';
   });
   const [commentsOpen, setCommentsOpen] = useState(false);
+  const [createOpen, setCreateOpen] = useState(false);
 
   const listRef = useRef<HTMLDivElement>(null);
   const {
@@ -254,8 +253,6 @@ export default function AuthedHome() {
   const prevScrollHeightRef = useRef(0);
 
   const createPost = useCreatePost(selectedSiteId);
-  const readerStream = useReaderStream(specialView === 'unread');
-  const likedPosts = useLikedPosts(specialView === 'liked');
 
   // Reset focused index when search changes
   useEffect(() => {
@@ -295,44 +292,15 @@ export default function AuthedHome() {
     prevScrollHeightRef.current = 0;
   }, [postsData]);
 
-  // Store active feed pagination in a ref so the scroll handler always has current values
-  const activeFeedRef = useRef<{
-    hasNext: boolean;
-    isFetching: boolean;
-    fetchNext: () => void;
-  }>({ hasNext: false, isFetching: false, fetchNext: () => {} });
-
-  // Update ref based on active view
-  if (specialView === 'unread') {
-    activeFeedRef.current = {
-      hasNext: readerStream.hasNextPage ?? false,
-      isFetching: readerStream.isFetchingNextPage,
-      fetchNext: readerStream.fetchNextPage,
-    };
-  } else if (specialView === 'liked') {
-    activeFeedRef.current = {
-      hasNext: likedPosts.hasNextPage ?? false,
-      isFetching: likedPosts.isFetchingNextPage,
-      fetchNext: likedPosts.fetchNextPage,
-    };
-  } else {
-    activeFeedRef.current = {
-      hasNext: hasNextPage ?? false,
-      isFetching: isFetchingNextPage,
-      fetchNext: fetchNextPage,
-    };
-  }
-
   // Load older posts when scrolled near the top
   const handleFeedScroll = useCallback(() => {
     const el = feedScrollRef.current;
-    const feed = activeFeedRef.current;
-    if (!el || !feed.hasNext || feed.isFetching) return;
+    if (!el || !hasNextPage || isFetchingNextPage) return;
     if (el.scrollTop < 200) {
       prevScrollHeightRef.current = el.scrollHeight;
-      feed.fetchNext();
+      fetchNextPage();
     }
-  }, []);
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
   // Mark post as seen when opened in the detail panel
   useEffect(() => {
@@ -413,20 +381,6 @@ export default function AuthedHome() {
           className="panel"
         >
           <aside className="sidebar">
-            <div className="sidebar-views">
-              <button
-                className={`sidebar-view-tab${specialView === 'unread' ? ' is-active' : ''}`}
-                onClick={() => selectSpecialView('unread')}
-              >
-                All Unread
-              </button>
-              <button
-                className={`sidebar-view-tab${specialView === 'liked' ? ' is-active' : ''}`}
-                onClick={() => selectSpecialView('liked')}
-              >
-                Liked
-              </button>
-            </div>
             {starredVisible.length > 0 && (
               <div className="starred-grid">
                 {starredVisible.map((site, i) => {
@@ -466,23 +420,34 @@ export default function AuthedHome() {
               </div>
             )}
             <div className="sidebar-search">
-              <input
-                type="text"
-                className="sidebar-search-input"
-                placeholder="Filter sites..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                onKeyDown={handleSearchKeyDown}
+              <div className="sidebar-search-field">
+                <input
+                  type="text"
+                  className="sidebar-search-input"
+                  placeholder="Filter sites..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onKeyDown={handleSearchKeyDown}
+                />
+                {searchQuery && (
+                  <button
+                    className="sidebar-search-clear"
+                    onClick={() => setSearchQuery('')}
+                    tabIndex={-1}
+                  >
+                    &times;
+                  </button>
+                )}
+              </div>
+              <IconButton
+                variant="minimal"
+                tone="neutral"
+                size="compact"
+                icon={plus}
+                label="New P2"
+                className="sidebar-search-action"
+                onClick={() => setCreateOpen(true)}
               />
-              {searchQuery && (
-                <button
-                  className="sidebar-search-clear"
-                  onClick={() => setSearchQuery('')}
-                  tabIndex={-1}
-                >
-                  &times;
-                </button>
-              )}
             </div>
             <div className="sidebar-sort">
               <select
@@ -558,47 +523,19 @@ export default function AuthedHome() {
         <Panel id="feed" defaultSize={45} minSize={25} className="panel">
           <main className="feed">
             {(() => {
-              // Determine active feed based on view mode
-              const isSpecial = specialView !== null;
-              const activeData = isSpecial
-                ? specialView === 'unread'
-                  ? readerStream
-                  : likedPosts
-                : null;
-              const p2BlogIds = following
-                ? new Set(
-                    following.filter((s) => s.is_wpforteams_site).map((s) => Number(s.blog_ID)),
-                  )
-                : new Set<number>();
-              const feedPosts = isSpecial
-                ? activeData!.posts.filter((p) => p2BlogIds.has(p.site_ID))
-                : (postsData?.posts ?? []);
-              const feedLoading = isSpecial ? activeData!.isLoading : postsLoading;
-              const feedError = isSpecial ? activeData!.error : postsError;
-              const feedIsFetchingNext = isSpecial
-                ? activeData!.isFetchingNextPage
-                : isFetchingNextPage;
-              const feedRefetch = isSpecial ? activeData!.refetch : refetchPosts;
-              const showFeed = isSpecial || selectedSiteId;
-              const feedTitle =
-                specialView === 'unread'
-                  ? 'All Unread'
-                  : specialView === 'liked'
-                    ? 'Liked Posts'
-                    : (selectedSite?.name ?? '');
+              const feedPosts = postsData?.posts ?? [];
 
               return (
                 <>
-                  {showFeed && (
+                  {selectedSiteId && (
                     <header className="panel-header">
                       <div className="panel-header-start">
                         <Text variant="heading-lg" render={<h2 />} className="page-title">
-                          {feedTitle}
+                          {selectedSite?.name ?? ''}
                         </Text>
                       </div>
                       <div className="panel-header-end">
-                        {!isSpecial &&
-                          selectedSite &&
+                        {selectedSite &&
                           (unseenMap.get(selectedSite.ID) ?? 0) > 0 &&
                           (() => {
                             const sub = following?.find(
@@ -620,7 +557,7 @@ export default function AuthedHome() {
                               />
                             ) : null;
                           })()}
-                        {!isSpecial && selectedSite && (
+                        {selectedSite && (
                           <IconButton
                             variant="minimal"
                             tone="neutral"
@@ -636,7 +573,7 @@ export default function AuthedHome() {
                             }
                           />
                         )}
-                        {!isSpecial && selectedSite && (
+                        {selectedSite && (
                           <IconButton
                             variant="minimal"
                             tone="neutral"
@@ -652,12 +589,12 @@ export default function AuthedHome() {
                           size="compact"
                           icon={rotateRight}
                           label="Refresh"
-                          onClick={() => feedRefetch()}
+                          onClick={() => refetchPosts()}
                         />
                       </div>
                     </header>
                   )}
-                  {!showFeed ? (
+                  {!selectedSiteId ? (
                     <div className="feed-empty">
                       <Text
                         variant="body-md"
@@ -666,7 +603,7 @@ export default function AuthedHome() {
                         Select a P2 to see its posts
                       </Text>
                     </div>
-                  ) : feedLoading ? (
+                  ) : postsLoading ? (
                     <div className="feed-status">
                       <Text
                         variant="body-md"
@@ -675,7 +612,7 @@ export default function AuthedHome() {
                         Loading...
                       </Text>
                     </div>
-                  ) : feedError ? (
+                  ) : postsError ? (
                     <div className="feed-status">
                       <Text
                         variant="body-md"
@@ -696,7 +633,7 @@ export default function AuthedHome() {
                   ) : (
                     <div className="feed-scroll" ref={feedScrollRef} onScroll={handleFeedScroll}>
                       <div className="feed-posts">
-                        {feedIsFetchingNext && (
+                        {isFetchingNextPage && (
                           <div className="feed-load-more">
                             <Text
                               variant="body-sm"
@@ -706,7 +643,7 @@ export default function AuthedHome() {
                             </Text>
                           </div>
                         )}
-                        {(isSpecial ? feedPosts : [...feedPosts].reverse()).map((feedPost) => {
+                        {[...feedPosts].reverse().map((feedPost) => {
                           const xOrigin = getXPostOrigin(feedPost);
 
                           if (xOrigin) {
@@ -715,12 +652,23 @@ export default function AuthedHome() {
                             return (
                               <article
                                 key={feedPost.ID}
-                                className={`post post-xpost${feedPost.ID === detailPostId ? ' is-selected' : ''}`}
-                                onClick={() =>
-                                  xOrigin.postId === detailPostId && xOrigin.blogId === detailSiteId
-                                    ? closeDetail()
-                                    : selectPost(xOrigin.blogId, xOrigin.postId)
-                                }
+                                className={`post post-xpost${xOrigin.postId === detailPostId && xOrigin.blogId === detailSiteId ? ' is-selected' : ''}`}
+                                onClick={(e) => {
+                                  if (
+                                    xOrigin.postId === detailPostId &&
+                                    xOrigin.blogId === detailSiteId
+                                  ) {
+                                    closeDetail();
+                                  } else {
+                                    const el = e.currentTarget;
+                                    selectPost(xOrigin.blogId, xOrigin.postId);
+                                    setTimeout(
+                                      () =>
+                                        el.scrollIntoView({ block: 'nearest', behavior: 'smooth' }),
+                                      220,
+                                    );
+                                  }
+                                }}
                               >
                                 <svg
                                   className="xpost-icon"
@@ -760,11 +708,19 @@ export default function AuthedHome() {
                             <article
                               key={`${postSiteId}-${feedPost.ID}`}
                               className={`post${feedPost.ID === detailPostId ? ' is-selected' : ''}`}
-                              onClick={() =>
-                                feedPost.ID === detailPostId && postSiteId === detailSiteId
-                                  ? closeDetail()
-                                  : selectPost(postSiteId, feedPost.ID)
-                              }
+                              onClick={(e) => {
+                                if (feedPost.ID === detailPostId && postSiteId === detailSiteId) {
+                                  closeDetail();
+                                } else {
+                                  const el = e.currentTarget;
+                                  selectPost(postSiteId, feedPost.ID);
+                                  setTimeout(
+                                    () =>
+                                      el.scrollIntoView({ block: 'nearest', behavior: 'smooth' }),
+                                    220,
+                                  );
+                                }
+                              }}
                             >
                               <div className="post-thread">
                                 {feedPost.author?.avatar_URL && (
@@ -779,11 +735,6 @@ export default function AuthedHome() {
                                     <Text variant="body-md" className="post-thread-author">
                                       {feedPost.author?.name ?? 'Unknown'}
                                     </Text>
-                                    {isSpecial && feedPost.site_name && (
-                                      <Text variant="body-sm" className="post-thread-site">
-                                        {feedPost.site_name}
-                                      </Text>
-                                    )}
                                     <Text variant="body-sm" className="post-thread-time">
                                       {relativeTime(feedPost.date)}
                                     </Text>
@@ -816,7 +767,7 @@ export default function AuthedHome() {
                       </div>
                     </div>
                   )}
-                  {selectedSiteId && !isSpecial && (
+                  {selectedSiteId && (
                     <div className="feed-compose">
                       <textarea
                         ref={composeRef}
@@ -1074,6 +1025,17 @@ export default function AuthedHome() {
           </div>
         </Panel>
       </Group>
+      <CreateP2Dialog
+        open={createOpen}
+        onOpenChange={setCreateOpen}
+        onCreated={(site) => {
+          const newId = Number(site.blog_details.blogid);
+          if (Number.isFinite(newId)) {
+            selectSite(newId);
+          }
+          setCreateOpen(false);
+        }}
+      />
     </div>
   );
 }

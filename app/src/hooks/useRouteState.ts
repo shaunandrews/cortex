@@ -1,18 +1,14 @@
 import { useMemo, useCallback } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 
-type SpecialView = 'unread' | 'liked';
-
 interface RouteState {
   selectedSiteId: number | null;
   detailSiteId: number | null;
   detailPostId: number | null;
-  specialView: SpecialView | null;
   hasDetail: boolean;
 
   selectSite: (siteId: number) => void;
   selectPost: (siteId: number, postId: number) => void;
-  selectSpecialView: (view: SpecialView) => void;
   closeDetail: () => void;
   goHome: () => void;
 }
@@ -33,33 +29,23 @@ export function useRouteState(): RouteState {
     //   /                        → []
     //   /site/123                → ['site', '123']
     //   /site/123/post/456      → ['site', '123', 'post', '456']
-    //   /unread                  → ['unread']
-    //   /unread/post/789/456    → ['unread', 'post', '789', '456']
-    //   /liked                   → ['liked']
-    //   /liked/post/789/456     → ['liked', 'post', '789', '456']
 
     let selectedSiteId: number | null = null;
     let detailSiteId: number | null = null;
     let detailPostId: number | null = null;
-    let specialView: SpecialView | null = null;
 
     if (parts[0] === 'site') {
       selectedSiteId = parsePositiveInt(parts[1]);
       if (parts[2] === 'post') {
-        detailSiteId = selectedSiteId;
-        detailPostId = parsePositiveInt(parts[3]);
-      }
-    } else if (parts[0] === 'unread') {
-      specialView = 'unread';
-      if (parts[1] === 'post') {
-        detailSiteId = parsePositiveInt(parts[2]);
-        detailPostId = parsePositiveInt(parts[3]);
-      }
-    } else if (parts[0] === 'liked') {
-      specialView = 'liked';
-      if (parts[1] === 'post') {
-        detailSiteId = parsePositiveInt(parts[2]);
-        detailPostId = parsePositiveInt(parts[3]);
+        if (parts.length >= 5) {
+          // /site/{selected}/post/{detailSite}/{detailPost} — x-post or cross-site detail
+          detailSiteId = parsePositiveInt(parts[3]);
+          detailPostId = parsePositiveInt(parts[4]);
+        } else {
+          // /site/{selected}/post/{postId} — same-site detail
+          detailSiteId = selectedSiteId;
+          detailPostId = parsePositiveInt(parts[3]);
+        }
       }
     }
 
@@ -67,7 +53,6 @@ export function useRouteState(): RouteState {
       selectedSiteId,
       detailSiteId,
       detailPostId,
-      specialView,
       hasDetail: detailPostId !== null,
     };
   }, [pathname]);
@@ -76,26 +61,23 @@ export function useRouteState(): RouteState {
 
   const selectPost = useCallback(
     (siteId: number, postId: number) => {
-      if (state.specialView) {
-        navigate(`/${state.specialView}/post/${siteId}/${postId}`);
+      if (state.selectedSiteId && siteId !== state.selectedSiteId) {
+        // Cross-site detail (e.g. x-post): keep current site selected
+        navigate(`/site/${state.selectedSiteId}/post/${siteId}/${postId}`);
       } else {
         navigate(`/site/${siteId}/post/${postId}`);
       }
     },
-    [navigate, state.specialView],
+    [navigate, state.selectedSiteId],
   );
 
-  const selectSpecialView = useCallback((view: SpecialView) => navigate(`/${view}`), [navigate]);
-
   const closeDetail = useCallback(() => {
-    if (state.specialView) {
-      navigate(`/${state.specialView}`);
-    } else if (state.selectedSiteId) {
+    if (state.selectedSiteId) {
       navigate(`/site/${state.selectedSiteId}`);
     } else {
       navigate('/');
     }
-  }, [navigate, state.specialView, state.selectedSiteId]);
+  }, [navigate, state.selectedSiteId]);
 
   const goHome = useCallback(() => navigate('/'), [navigate]);
 
@@ -103,7 +85,6 @@ export function useRouteState(): RouteState {
     ...state,
     selectSite,
     selectPost,
-    selectSpecialView,
     closeDetail,
     goHome,
   };
