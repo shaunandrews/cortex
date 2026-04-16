@@ -7,7 +7,8 @@ import type {
   WPComLikeResponse,
   WPComSubscription,
   WPComFollowingResponse,
-  WPComReaderResponse,
+  CreateP2Params,
+  CreateP2Response,
 } from './types';
 
 const API_BASE = 'https://public-api.wordpress.com/rest/v1.1';
@@ -90,28 +91,6 @@ export async function unlikePost(
     token,
     'POST',
   );
-}
-
-export async function getReaderStream(
-  token: string,
-  pageHandle?: string,
-): Promise<WPComReaderResponse> {
-  const params = new URLSearchParams({ number: '20' });
-  if (pageHandle) params.set('page_handle', pageHandle);
-  return apiFetch<WPComReaderResponse>(`/read/following?${params}`, token, 'GET', {
-    base: API_BASE_V12,
-  });
-}
-
-export async function getLikedPosts(
-  token: string,
-  pageHandle?: string,
-): Promise<WPComReaderResponse> {
-  const params = new URLSearchParams({ number: '20' });
-  if (pageHandle) params.set('page_handle', pageHandle);
-  return apiFetch<WPComReaderResponse>(`/read/liked?${params}`, token, 'GET', {
-    base: API_BASE_V12,
-  });
 }
 
 export async function createPost(
@@ -274,6 +253,80 @@ export async function markAllAsSeen(
   }
 
   return res.json();
+}
+
+/**
+ * Probe whether a WP.com subdomain is free by GETting the site info
+ * endpoint. 200 → taken. 404 → available. Anything else → unknown
+ * (caller should fall back to submit-time validation).
+ *
+ * This uses the authenticated `/rest/v1.1/sites/*` path that already
+ * has CORS configured for Cortex, unlike the public
+ * `/is-available/blog/*` endpoint which is cross-origin-blocked.
+ */
+export async function checkSlugAvailable(
+  token: string,
+  slug: string,
+): Promise<'available' | 'taken' | 'unknown'> {
+  const res = await fetch(`${API_BASE}/sites/${slug}.wordpress.com?fields=ID`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (res.status === 404) return 'available';
+  if (res.ok) return 'taken';
+  // 403 (private site we can't see) also means the slug is in use.
+  if (res.status === 403) return 'taken';
+  return 'unknown';
+}
+
+/**
+ * Create a new P2 site inside the a8c workspace.
+ *
+ * Hits `/v1.1/sites/new` with the P2-specific option flags the P2 Hub
+ * uses (see `wp-content/plugins/p2/hub.js` in the wpcom repo). The
+ * workspace provisions the site (stickers, theme, permissions, JPS
+ * indexing) server-side after the endpoint returns.
+ *
+ * Defaults `lang_id` to 1 (English) — the endpoint requires it, and all
+ * Automatticians operate in English inside Cortex.
+ */
+export async function createP2Site(
+  token: string,
+  { blog_name, blog_title, lang_id = 1 }: CreateP2Params,
+): Promise<CreateP2Response> {
+  const body = new URLSearchParams();
+  body.append('blog_name', blog_name);
+  body.append('blog_title', blog_title);
+  body.append('lang_id', String(lang_id));
+  body.append('public', '-1');
+  body.append('options[is_wpforteams_site]', 'true');
+
+  const res = await fetch(`${API_BASE}/sites/new`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+    body,
+  });
+
+  const rawText = await res.text();
+  let data: unknown;
+  try {
+    data = JSON.parse(rawText);
+  } catch {
+    data = { message: rawText };
+  }
+
+  if (!res.ok) {
+    if (res.status === 401) throw new Error('UNAUTHORIZED');
+    const payload = (data ?? {}) as { error?: string; message?: string };
+
+    console.error('[createP2Site] API error', res.status, payload);
+    const detail = payload?.message || payload?.error || rawText || `HTTP ${res.status}`;
+    const err = new Error(detail) as Error & { code?: string; status?: number };
+    err.code = payload?.error;
+    err.status = res.status;
+    throw err;
+  }
+
+  return data as CreateP2Response;
 }
 
 export async function markPostsAsSeen(

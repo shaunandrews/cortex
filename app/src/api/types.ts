@@ -58,11 +58,6 @@ export interface WPComPost {
   site_URL?: string;
 }
 
-export interface WPComReaderResponse {
-  posts: WPComPost[];
-  next_page_handle?: string;
-}
-
 export interface WPComPostsResponse {
   found: number;
   posts: WPComPost[];
@@ -107,4 +102,20 @@ export interface WPComFollowingResponse {
   page: number;
   number: number;
   total_subscriptions: number;
+}
+
+export interface CreateP2Params {
+  blog_name: string;
+  blog_title: string;
+  lang_id?: number;
+}
+
+export interface CreateP2Response {
+  success: boolean;
+  blog_details: {
+    blogid: string | number;
+    blogname: string;
+    url: string;
+    site_slug?: string;
+  };
 }

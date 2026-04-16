@@ -26,17 +26,32 @@ export function Text({
   children,
   render,
   style,
+  className,
 }: {
   children: ReactNode;
   variant?: string;
-  render?: React.ReactElement;
+  render?: React.ReactElement<Record<string, unknown>>;
   style?: React.CSSProperties;
+  className?: string;
 }) {
   if (render) {
-    const Tag = (render as React.ReactElement).type as React.ElementType;
-    return <Tag style={style}>{children}</Tag>;
+    const Tag = render.type as React.ElementType;
+    const renderProps = render.props as Record<string, unknown>;
+    return (
+      <Tag
+        {...renderProps}
+        style={{ ...(renderProps.style as object), ...style }}
+        className={className}
+      >
+        {children}
+      </Tag>
+    );
   }
-  return <span style={style}>{children}</span>;
+  return (
+    <span style={style} className={className}>
+      {children}
+    </span>
+  );
 }
 
 export function Button({
@@ -46,9 +61,11 @@ export function Button({
   className,
   title,
   disabled,
+  loading,
+  type,
 }: {
   children: ReactNode;
-  onClick?: () => void;
+  onClick?: (e: React.MouseEvent) => void;
   variant?: string;
   tone?: string;
   size?: string;
@@ -56,9 +73,19 @@ export function Button({
   className?: string;
   title?: string;
   disabled?: boolean;
+  loading?: boolean;
+  type?: 'button' | 'submit' | 'reset';
 }) {
   return (
-    <button onClick={onClick} style={style} className={className} title={title} disabled={disabled}>
+    <button
+      onClick={onClick}
+      style={style}
+      className={className}
+      title={title}
+      disabled={disabled || loading}
+      type={type}
+      aria-busy={loading || undefined}
+    >
       {children}
     </button>
   );
@@ -122,3 +149,108 @@ export const Notice = {
   Title: NoticeTitle,
   Description: NoticeDescription,
 };
+
+function DialogRoot({
+  children,
+  open,
+}: {
+  children: ReactNode;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+}) {
+  if (!open) return null;
+  return <div role="dialog">{children}</div>;
+}
+
+function DialogPopup({ children }: { children: ReactNode; size?: string }) {
+  return <div className="dialog-popup">{children}</div>;
+}
+
+function DialogHeader({ children }: { children: ReactNode }) {
+  return <header>{children}</header>;
+}
+
+function DialogTitle({ children }: { children: ReactNode }) {
+  return <h2>{children}</h2>;
+}
+
+function DialogFooter({ children }: { children: ReactNode }) {
+  return <footer>{children}</footer>;
+}
+
+function DialogAction({
+  children,
+  onClick,
+  type,
+  disabled,
+}: {
+  children: ReactNode;
+  onClick?: (e: React.MouseEvent) => void;
+  type?: 'button' | 'submit' | 'reset';
+  disabled?: boolean;
+  variant?: string;
+  tone?: string;
+}) {
+  return (
+    <button onClick={onClick} type={type} disabled={disabled}>
+      {children}
+    </button>
+  );
+}
+
+function DialogCloseIcon({ label }: { label?: string }) {
+  return <button aria-label={label ?? 'Close'} />;
+}
+
+export const Dialog = {
+  Root: DialogRoot,
+  Popup: DialogPopup,
+  Header: DialogHeader,
+  Title: DialogTitle,
+  Footer: DialogFooter,
+  Action: DialogAction,
+  CloseIcon: DialogCloseIcon,
+};
+
+interface InputControlProps {
+  label: ReactNode;
+  description?: ReactNode;
+  details?: ReactNode;
+  value?: string;
+  onChange?: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  placeholder?: string;
+  suffix?: ReactNode;
+  prefix?: ReactNode;
+  autoComplete?: string;
+  autoCorrect?: string;
+  spellCheck?: boolean;
+  type?: string;
+  disabled?: boolean;
+}
+
+import { forwardRef } from 'react';
+
+export const InputControl = forwardRef<HTMLInputElement, InputControlProps>(function InputControl(
+  { label, description, details, suffix, prefix, ...rest },
+  ref,
+) {
+  const labelText = typeof label === 'string' ? label : 'field';
+  return (
+    <label>
+      <span>{label}</span>
+      {description && <span className="field-description">{description}</span>}
+      {prefix && <span className="field-prefix">{prefix}</span>}
+      <input ref={ref} aria-label={labelText} {...rest} />
+      {suffix && <span className="field-suffix">{suffix}</span>}
+      {details && <span className="field-details">{details}</span>}
+    </label>
+  );
+});
+
+export function Popover() {
+  return null;
+}
+
+export function VisuallyHidden({ children }: { children: ReactNode }) {
+  return <span style={{ position: 'absolute', left: '-9999px' }}>{children}</span>;
+}
