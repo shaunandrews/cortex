@@ -247,9 +247,116 @@ export const InputControl = forwardRef<HTMLInputElement, InputControlProps>(func
   );
 });
 
-export function Popover() {
-  return null;
+import { createContext, useContext, useState, cloneElement, isValidElement } from 'react';
+
+type PopoverCtx = {
+  open: boolean;
+  setOpen: (open: boolean) => void;
+};
+
+const PopoverContext = createContext<PopoverCtx | null>(null);
+
+function PopoverRoot({
+  children,
+  open,
+  onOpenChange,
+  defaultOpen,
+}: {
+  children: ReactNode;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  defaultOpen?: boolean;
+  modal?: boolean;
+}) {
+  const [internalOpen, setInternalOpen] = useState(defaultOpen ?? false);
+  const isControlled = open !== undefined;
+  const currentOpen = isControlled ? open : internalOpen;
+  const setOpen = (next: boolean) => {
+    if (!isControlled) setInternalOpen(next);
+    onOpenChange?.(next);
+  };
+  return (
+    <PopoverContext.Provider value={{ open: currentOpen, setOpen }}>
+      {children}
+    </PopoverContext.Provider>
+  );
 }
+
+function PopoverTrigger({
+  children,
+  render,
+  onClick,
+  ...rest
+}: {
+  children?: ReactNode;
+  render?: React.ReactElement<Record<string, unknown>>;
+  onClick?: (e: React.MouseEvent) => void;
+} & Record<string, unknown>) {
+  const ctx = useContext(PopoverContext);
+  const handleClick = (e: React.MouseEvent) => {
+    ctx?.setOpen(!ctx.open);
+    onClick?.(e);
+  };
+  if (render && isValidElement(render)) {
+    const existing = render.props as Record<string, unknown>;
+    return cloneElement(render, {
+      ...existing,
+      ...rest,
+      onClick: handleClick,
+      children,
+    });
+  }
+  return (
+    <button onClick={handleClick} {...(rest as Record<string, unknown>)}>
+      {children}
+    </button>
+  );
+}
+
+function PopoverPopup({ children }: { children: ReactNode } & Record<string, unknown>) {
+  const ctx = useContext(PopoverContext);
+  if (!ctx?.open) return null;
+  return <div role="dialog">{children}</div>;
+}
+
+function PopoverTitle({ children }: { children: ReactNode }) {
+  return <h2>{children}</h2>;
+}
+
+function PopoverDescription({ children }: { children: ReactNode }) {
+  return <p>{children}</p>;
+}
+
+function PopoverClose({
+  children,
+  onClick,
+  ...rest
+}: { children?: ReactNode; onClick?: (e: React.MouseEvent) => void } & Record<
+  string,
+  unknown
+>) {
+  const ctx = useContext(PopoverContext);
+  return (
+    <button
+      onClick={(e) => {
+        ctx?.setOpen(false);
+        onClick?.(e);
+      }}
+      {...(rest as Record<string, unknown>)}
+    >
+      {children}
+    </button>
+  );
+}
+
+export const Popover = {
+  Root: PopoverRoot,
+  Trigger: PopoverTrigger,
+  Popup: PopoverPopup,
+  Title: PopoverTitle,
+  Description: PopoverDescription,
+  Close: PopoverClose,
+};
 
 export function VisuallyHidden({ children }: { children: ReactNode }) {
   return <span style={{ position: 'absolute', left: '-9999px' }}>{children}</span>;
