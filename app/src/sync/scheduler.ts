@@ -195,12 +195,28 @@ export class Scheduler {
       }
     }
 
-    // Phase 2: Build priority queue
-    this.sitesToFetch = p2Sites.map((site) => ({
-      siteId: site.ID,
-      priority: this.computePriority(site.ID, unseenBySite.get(site.ID) ?? 0),
-      unseenCount: unseenBySite.get(site.ID) ?? 0,
-    }));
+    // Phase 2: Build priority queue — only fetch sites with new unseen posts
+    const storedStates = await this.store.getAllSyncStates();
+    const storedCountMap = new Map(storedStates.map((s) => [s.siteId, s.lastUnseenCount]));
+
+    this.sitesToFetch = [];
+    for (const site of p2Sites) {
+      const freshCount = unseenBySite.get(site.ID) ?? 0;
+      const storedCount = storedCountMap.get(site.ID);
+      const neverFetched = storedCount === undefined;
+      const countChanged = freshCount !== storedCount;
+
+      if (neverFetched || countChanged) {
+        this.sitesToFetch.push({
+          siteId: site.ID,
+          priority: this.computePriority(site.ID, freshCount),
+          unseenCount: freshCount,
+        });
+      } else {
+        // Site is warm in IDB and count hasn't changed — skip
+        this.siteStatuses[site.ID] = 'fresh';
+      }
+    }
     this.sitesToFetch.sort((a, b) => a.priority - b.priority);
     this.sitesTotal = this.sitesToFetch.length;
     this.sitesFetched = 0;
@@ -267,12 +283,17 @@ export class Scheduler {
       fetchedAt: Date.now(),
     }));
 
+    // Look up the current unseen count so we can compare on next startup
+    const following = await this.store.getFollowing();
+    const sub = following.find((s) => Number(s.blog_ID) === siteId);
+    const currentUnseen = sub?.unseen_count ?? 0;
+
     await this.store.putPosts(posts);
     await this.store.putSyncState({
       siteId,
       lastFetchedAt: Date.now(),
-      lastUnseenCount: 0,
-      priority: this.computePriority(siteId, 0),
+      lastUnseenCount: currentUnseen,
+      priority: this.computePriority(siteId, currentUnseen),
     });
 
     this.emit({ type: 'posts', siteId, posts });
