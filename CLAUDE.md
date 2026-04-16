@@ -38,7 +38,7 @@ Dev server is pinned to port 5176 (`strictPort: true` in vite.config.ts) — the
 ### Layout
 
 Three-panel resizable layout (`react-resizable-panels`):
-1. **Sidebar** — starred sites grid, search/filter, sorted site list with unread badges
+1. **Sidebar** — user-defined groups (Favorites + Sites are defaults), per-group sort, drag-and-drop, right-click context menus. See `docs/features.md` → "Sidebar Groups".
 2. **Feed** — posts for the selected site, with x-post detection and image galleries
 3. **Detail** (collapsible) — full post content, likes, comments
 
@@ -66,7 +66,8 @@ Key hooks:
 - `hooks/useFollowing` — Reader subscriptions with `unseen_count` per site
 - `hooks/useMarkAsSeen` — mutation to mark posts as read (optimistic update)
 - `hooks/usePostComments` / `useToggleLike` — comments and like toggle
-- `hooks/useStarredSites` — localStorage-backed favorites
+- `hooks/useSidebarGroups` — groups, membership, sort, drag state; the sidebar's single source of truth. Writes to `cortex_sidebar_groups`, `cortex_sidebar_membership`, and `cortex_sidebar_last_group` in localStorage.
+- `hooks/useStarredSites` — thin reader over the sidebar membership storage. Returns `starredIds` (sites in the Favorites group). Consumed by `SyncProvider` to prioritize prefetch.
 
 ### X-Posts
 
