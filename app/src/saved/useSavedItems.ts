@@ -6,6 +6,7 @@ import {
   deleteSavedItem,
   findSavedItem,
   updateSavedItemGroup,
+  updateSavedItemPosition,
   addSavedGroup,
   updateSavedGroup,
   deleteSavedGroup,
@@ -152,6 +153,15 @@ export function useUnsaveItem() {
   return useMutation({
     mutationFn: (id: number) => deleteSavedItem(id),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['saved-items'] }),
+  });
+}
+
+export function useUpdateItemPosition() {
+  return useMutation({
+    mutationFn: ({ id, x, y }: { id: number; x: number; y: number }) =>
+      updateSavedItemPosition(id, x, y),
+    // No query invalidation — position changes are high-frequency and
+    // the React Flow state is the source of truth during the session.
   });
 }
 

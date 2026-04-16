@@ -10,7 +10,7 @@
  * - onMessage() emits WorkerMessages
  */
 
-import { SyncStore } from './store';
+import { type SyncStore, getSharedStore } from './store';
 import { Fetcher } from './fetcher';
 import { Scheduler, type SchedulerEvent } from './scheduler';
 import { getPost } from '../api/wpcom';
@@ -27,7 +27,7 @@ export class SyncEngine {
   private started = false;
 
   constructor() {
-    this.store = new SyncStore();
+    this.store = getSharedStore();
     this.fetcher = new Fetcher(6);
     this.scheduler = new Scheduler(this.store, this.fetcher);
 

@@ -2,19 +2,23 @@
  * IndexedDB store for the sync engine.
  * Uses the `idb` library for a thin promise wrapper around native IDB.
  *
- * Four object stores:
+ * Object stores:
  *   sites       – P2 site metadata, keyed by site ID
  *   posts       – Lightweight posts (no full content), compound key [siteId, postId]
  *   postContent – Full HTML content, compound key [siteId, postId]
  *   syncState   – Per-site sync metadata, keyed by site ID
+ *   following   – Reader subscriptions, keyed by blog_ID
+ *   savedItems  – User-saved posts/comments with content snapshots
+ *   savedGroups – User-created folders for organizing saved items
  */
 
 import { openDB, type IDBPDatabase } from 'idb';
 import type { WPComSite, WPComSubscription } from '../api/types';
 import type { LightweightPost, SiteSyncState } from './protocol';
+import type { SavedItem, SavedGroup } from '../saved/types';
 
 const DB_NAME = 'cortex-sync';
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 
 export interface SyncStoreDB {
   sites: {
@@ -40,6 +44,20 @@ export interface SyncStoreDB {
   following: {
     key: number; // blog_ID
     value: WPComSubscription;
+  };
+  savedItems: {
+    key: number; // auto-increment id
+    value: SavedItem;
+    indexes: {
+      byGroup: number;
+      bySite: number;
+      byType: string;
+      bySavedAt: number;
+    };
+  };
+  savedGroups: {
+    key: number; // auto-increment id
+    value: SavedGroup;
   };
 }
 
@@ -78,6 +96,26 @@ export class SyncStore {
         // Following/subscriptions store
         if (!db.objectStoreNames.contains('following')) {
           db.createObjectStore('following', { keyPath: 'blog_ID' });
+        }
+
+        // Saved items store (v2)
+        if (!db.objectStoreNames.contains('savedItems')) {
+          const savedStore = db.createObjectStore('savedItems', {
+            keyPath: 'id',
+            autoIncrement: true,
+          });
+          savedStore.createIndex('byGroup', 'groupId');
+          savedStore.createIndex('bySite', 'siteId');
+          savedStore.createIndex('byType', 'type');
+          savedStore.createIndex('bySavedAt', 'savedAt');
+        }
+
+        // Saved groups store (v2)
+        if (!db.objectStoreNames.contains('savedGroups')) {
+          db.createObjectStore('savedGroups', {
+            keyPath: 'id',
+            autoIncrement: true,
+          });
         }
       },
     });
@@ -175,13 +213,116 @@ export class SyncStore {
   }
 
   // ---------------------------------------------------------------------------
+  // Saved items
+  // ---------------------------------------------------------------------------
+
+  async getSavedItems(): Promise<SavedItem[]> {
+    const db = await this.dbPromise;
+    return db.getAll('savedItems');
+  }
+
+  async getSavedItemsByGroup(groupId: number | null): Promise<SavedItem[]> {
+    const db = await this.dbPromise;
+    if (groupId === null) {
+      // IDB can't index null directly — filter in memory
+      const all = await db.getAll('savedItems');
+      return all.filter((item) => item.groupId === null);
+    }
+    return db.getAllFromIndex('savedItems', 'byGroup', groupId);
+  }
+
+  async findSavedItem(
+    type: 'post' | 'comment',
+    siteId: number,
+    postId: number,
+    commentId: number | null,
+  ): Promise<SavedItem | undefined> {
+    const db = await this.dbPromise;
+    const all = await db.getAllFromIndex('savedItems', 'bySite', siteId);
+    return all.find(
+      (item) => item.type === type && item.postId === postId && item.commentId === commentId,
+    );
+  }
+
+  async addSavedItem(item: SavedItem): Promise<number> {
+    const db = await this.dbPromise;
+    // Strip `id` so IDB auto-increment generates it
+    const rest = { ...item };
+    delete (rest as Record<string, unknown>).id;
+    return db.add('savedItems', rest as SavedItem) as Promise<number>;
+  }
+
+  async deleteSavedItem(id: number): Promise<void> {
+    const db = await this.dbPromise;
+    await db.delete('savedItems', id);
+  }
+
+  async updateSavedItemGroup(id: number, groupId: number | null): Promise<void> {
+    const db = await this.dbPromise;
+    const item = await db.get('savedItems', id);
+    if (item) {
+      item.groupId = groupId;
+      await db.put('savedItems', item);
+    }
+  }
+
+  async updateSavedItemPosition(id: number, x: number, y: number): Promise<void> {
+    const db = await this.dbPromise;
+    const item = await db.get('savedItems', id);
+    if (item) {
+      item.x = x;
+      item.y = y;
+      await db.put('savedItems', item);
+    }
+  }
+
+  async moveSavedItemsFromGroup(fromGroupId: number): Promise<void> {
+    const db = await this.dbPromise;
+    const items = await db.getAllFromIndex('savedItems', 'byGroup', fromGroupId);
+    if (items.length === 0) return;
+    const tx = db.transaction('savedItems', 'readwrite');
+    for (const item of items) {
+      item.groupId = null;
+      tx.store.put(item);
+    }
+    await tx.done;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Saved groups
+  // ---------------------------------------------------------------------------
+
+  async getSavedGroups(): Promise<SavedGroup[]> {
+    const db = await this.dbPromise;
+    return db.getAll('savedGroups');
+  }
+
+  async addSavedGroup(group: SavedGroup): Promise<number> {
+    const db = await this.dbPromise;
+    const rest = { ...group };
+    delete (rest as Record<string, unknown>).id;
+    return db.add('savedGroups', rest as SavedGroup) as Promise<number>;
+  }
+
+  async updateSavedGroup(group: SavedGroup): Promise<void> {
+    const db = await this.dbPromise;
+    await db.put('savedGroups', group);
+  }
+
+  async deleteSavedGroup(id: number): Promise<void> {
+    const db = await this.dbPromise;
+    await this.moveSavedItemsFromGroup(id);
+    await db.delete('savedGroups', id);
+  }
+
+  // ---------------------------------------------------------------------------
   // Maintenance
   // ---------------------------------------------------------------------------
 
   async clearAll(): Promise<void> {
     const db = await this.dbPromise;
     const tx = db.transaction(
-      ['sites', 'posts', 'postContent', 'syncState', 'following'],
+      ['sites', 'posts', 'postContent', 'syncState', 'following', 'savedItems', 'savedGroups'],
       'readwrite',
     );
     await Promise.all([
@@ -190,6 +331,8 @@ export class SyncStore {
       tx.objectStore('postContent').clear(),
       tx.objectStore('syncState').clear(),
       tx.objectStore('following').clear(),
+      tx.objectStore('savedItems').clear(),
+      tx.objectStore('savedGroups').clear(),
       tx.done,
     ]);
   }
@@ -211,4 +354,11 @@ export class SyncStore {
     await tx.done;
     return stale.length;
   }
+}
+
+/** Shared singleton — all callers use the same DB connection. */
+let _sharedStore: SyncStore | null = null;
+export function getSharedStore(): SyncStore {
+  if (!_sharedStore) _sharedStore = new SyncStore();
+  return _sharedStore;
 }

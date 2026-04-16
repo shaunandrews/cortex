@@ -53,6 +53,7 @@ export interface WPComPost {
   like_count?: number;
   i_like?: boolean;
   tags?: Record<string, { name: string; slug: string }>;
+  categories?: Record<string, { name: string; slug: string }>;
   metadata?: WPComPostMeta[];
   site_name?: string;
   site_URL?: string;
