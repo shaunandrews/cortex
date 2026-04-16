@@ -12,7 +12,7 @@ function wrapper(initialEntries: string[]) {
 
 describe('useRouteState', () => {
   describe('URL parsing', () => {
-    it('parses / as empty state', () => {
+    it('parses / as home with empty state', () => {
       const { result } = renderHook(() => useRouteState(), {
         wrapper: wrapper(['/']),
       });
@@ -20,6 +20,7 @@ describe('useRouteState', () => {
       expect(result.current.detailSiteId).toBeNull();
       expect(result.current.detailPostId).toBeNull();
       expect(result.current.hasDetail).toBe(false);
+      expect(result.current.isHome).toBe(true);
     });
 
     it('parses /site/:siteId', () => {
@@ -30,6 +31,7 @@ describe('useRouteState', () => {
       expect(result.current.detailSiteId).toBeNull();
       expect(result.current.detailPostId).toBeNull();
       expect(result.current.hasDetail).toBe(false);
+      expect(result.current.isHome).toBe(false);
     });
 
     it('parses /site/:siteId/post/:postId', () => {
@@ -40,6 +42,18 @@ describe('useRouteState', () => {
       expect(result.current.detailSiteId).toBe(123);
       expect(result.current.detailPostId).toBe(456);
       expect(result.current.hasDetail).toBe(true);
+      expect(result.current.isHome).toBe(false);
+    });
+
+    it('parses /post/:siteId/:postId as home-context detail', () => {
+      const { result } = renderHook(() => useRouteState(), {
+        wrapper: wrapper(['/post/10/99']),
+      });
+      expect(result.current.selectedSiteId).toBeNull();
+      expect(result.current.detailSiteId).toBe(10);
+      expect(result.current.detailPostId).toBe(99);
+      expect(result.current.hasDetail).toBe(true);
+      expect(result.current.isHome).toBe(true);
     });
 
     it('returns null for invalid site ID', () => {
@@ -95,6 +109,18 @@ describe('useRouteState', () => {
       expect(result.current.detailPostId).toBe(999);
     });
 
+    it('selectPost from home context navigates to /post/:siteId/:postId', () => {
+      const { result } = renderHook(() => useRouteState(), {
+        wrapper: wrapper(['/']),
+      });
+      act(() => result.current.selectPost(10, 99));
+      expect(result.current.isHome).toBe(true);
+      expect(result.current.detailSiteId).toBe(10);
+      expect(result.current.detailPostId).toBe(99);
+      expect(result.current.hasDetail).toBe(true);
+      expect(result.current.selectedSiteId).toBeNull();
+    });
+
     it('closeDetail from site+post goes to site', () => {
       const { result } = renderHook(() => useRouteState(), {
         wrapper: wrapper(['/site/123/post/456']),
@@ -104,6 +130,16 @@ describe('useRouteState', () => {
       expect(result.current.hasDetail).toBe(false);
     });
 
+    it('closeDetail from home-context detail goes to /', () => {
+      const { result } = renderHook(() => useRouteState(), {
+        wrapper: wrapper(['/post/10/99']),
+      });
+      act(() => result.current.closeDetail());
+      expect(result.current.isHome).toBe(true);
+      expect(result.current.hasDetail).toBe(false);
+      expect(result.current.selectedSiteId).toBeNull();
+    });
+
     it('goHome navigates to /', () => {
       const { result } = renderHook(() => useRouteState(), {
         wrapper: wrapper(['/site/123/post/456']),
@@ -111,6 +147,59 @@ describe('useRouteState', () => {
       act(() => result.current.goHome());
       expect(result.current.selectedSiteId).toBeNull();
       expect(result.current.hasDetail).toBe(false);
+    });
+
+    it('goSaved navigates to /saved', () => {
+      const { result } = renderHook(() => useRouteState(), {
+        wrapper: wrapper(['/']),
+      });
+      act(() => result.current.goSaved());
+      expect(result.current.isSavedView).toBe(true);
+      expect(result.current.selectedSiteId).toBeNull();
+      expect(result.current.hasDetail).toBe(false);
+    });
+
+    it('selectPost from saved view navigates to /saved/post/:siteId/:postId', () => {
+      const { result } = renderHook(() => useRouteState(), {
+        wrapper: wrapper(['/saved']),
+      });
+      act(() => result.current.selectPost(10, 99));
+      expect(result.current.isSavedView).toBe(true);
+      expect(result.current.detailSiteId).toBe(10);
+      expect(result.current.detailPostId).toBe(99);
+      expect(result.current.hasDetail).toBe(true);
+    });
+
+    it('closeDetail from saved view goes to /saved', () => {
+      const { result } = renderHook(() => useRouteState(), {
+        wrapper: wrapper(['/saved/post/10/99']),
+      });
+      act(() => result.current.closeDetail());
+      expect(result.current.isSavedView).toBe(true);
+      expect(result.current.hasDetail).toBe(false);
+    });
+  });
+
+  describe('saved view parsing', () => {
+    it('parses /saved as saved view', () => {
+      const { result } = renderHook(() => useRouteState(), {
+        wrapper: wrapper(['/saved']),
+      });
+      expect(result.current.isSavedView).toBe(true);
+      expect(result.current.selectedSiteId).toBeNull();
+      expect(result.current.hasDetail).toBe(false);
+      expect(result.current.isHome).toBe(false);
+    });
+
+    it('parses /saved/post/:siteId/:postId', () => {
+      const { result } = renderHook(() => useRouteState(), {
+        wrapper: wrapper(['/saved/post/10/99']),
+      });
+      expect(result.current.isSavedView).toBe(true);
+      expect(result.current.detailSiteId).toBe(10);
+      expect(result.current.detailPostId).toBe(99);
+      expect(result.current.hasDetail).toBe(true);
+      expect(result.current.isHome).toBe(false);
     });
   });
 });
