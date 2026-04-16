@@ -1,1 +1,1 @@
-cd app && npx tsc -b && npx lint-staged
+cd app && npx tsc -b && npx vitest run && npx lint-staged
