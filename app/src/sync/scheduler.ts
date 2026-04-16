@@ -6,11 +6,17 @@
  * No DOM or React dependencies.
  */
 
-import type { WPComSite, WPComSubscription } from '../api/types';
+import type { WPComSite, WPComSubscription, WPComNotification } from '../api/types';
 import type { LightweightPost, SyncPhase, SyncProgress, SiteStatus } from './protocol';
 import type { SyncStore } from './store';
 import { Fetcher } from './fetcher';
-import { getMySites, getFollowingPage1, getFollowing, getSitePostsLightweight } from '../api/wpcom';
+import {
+  getMySites,
+  getFollowingPage1,
+  getFollowing,
+  getSitePostsLightweight,
+  getNotifications,
+} from '../api/wpcom';
 
 // ---------------------------------------------------------------------------
 // Priority scores (lower = fetched sooner)
@@ -37,6 +43,7 @@ export type SchedulerEvent =
   | { type: 'sites'; sites: WPComSite[] }
   | { type: 'following'; subscriptions: WPComSubscription[] }
   | { type: 'posts'; siteId: number; posts: LightweightPost[] }
+  | { type: 'notifications'; notifications: WPComNotification[] }
   | {
       type: 'status';
       phase: SyncPhase;
@@ -165,10 +172,11 @@ export class Scheduler {
   private async bootstrap(): Promise<void> {
     if (!this.token || this.stopped) return;
 
-    // Phase 1: Parallel fetch sites + following page 1
-    const [sitesRes, followingRes] = await Promise.all([
+    // Phase 1: Parallel fetch sites + following page 1 + notifications
+    const [sitesRes, followingRes, notificationsRes] = await Promise.all([
       getMySites(this.token),
       getFollowingPage1(this.token),
+      getNotifications(this.token).catch(() => ({ notes: [] })),
     ]);
 
     if (this.stopped) return;
@@ -185,6 +193,11 @@ export class Scheduler {
     const subs = followingRes.subscriptions ?? [];
     await this.store.putFollowing(subs);
     this.emit({ type: 'following', subscriptions: subs });
+
+    // Store notifications
+    const notifications = notificationsRes.notes ?? [];
+    await this.store.putNotifications(notifications);
+    this.emit({ type: 'notifications', notifications });
 
     // Build unseen count map from subscriptions
     const unseenBySite = new Map<number, number>();
@@ -367,6 +380,9 @@ export class Scheduler {
   private async checkForChanges(): Promise<void> {
     if (!this.token || this.stopped) return;
 
+    // Refresh notifications alongside change detection
+    this.refreshNotifications();
+
     try {
       const res = await getFollowingPage1(this.token);
       const subs = res.subscriptions ?? [];
@@ -407,6 +423,19 @@ export class Scheduler {
             this.emitStatus();
           });
       }
+    } catch {
+      // Will retry on next interval
+    }
+  }
+
+  private async refreshNotifications(): Promise<void> {
+    if (!this.token || this.stopped) return;
+
+    try {
+      const res = await getNotifications(this.token);
+      const notifications = res.notes ?? [];
+      await this.store.putNotifications(notifications);
+      this.emit({ type: 'notifications', notifications });
     } catch {
       // Will retry on next interval
     }

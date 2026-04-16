@@ -92,6 +92,21 @@ vi.mock('../api/wpcom', () => ({
       author: { name: 'Test', avatar_URL: '' },
     }),
   ),
+  getNotifications: vi.fn(() =>
+    Promise.resolve({
+      notes: [
+        {
+          id: 1,
+          type: 'mention',
+          read: 0,
+          timestamp: '2026-04-16T12:00:00Z',
+          subject: [{ text: 'Alice mentioned you' }],
+          body: [],
+          meta: { ids: { site: 10, post: 1 } },
+        },
+      ],
+    }),
+  ),
 }));
 
 // Clear IDB between tests
@@ -150,6 +165,25 @@ describe('SyncEngine', () => {
       expect(postsMsg.siteId).toBe(10);
       expect(postsMsg.posts).toHaveLength(1);
     }
+  });
+
+  it('emits NOTIFICATIONS_UPDATED during bootstrap', async () => {
+    await engine.start('test-token', []);
+
+    const notifMsg = messages.find((m) => m.type === 'NOTIFICATIONS_UPDATED');
+    expect(notifMsg).toBeDefined();
+    if (notifMsg?.type === 'NOTIFICATIONS_UPDATED') {
+      expect(notifMsg.notifications).toHaveLength(1);
+      expect(notifMsg.notifications[0].type).toBe('mention');
+    }
+  });
+
+  it('stores notifications in IDB accessible via getter', async () => {
+    await engine.start('test-token', []);
+
+    const notifications = await engine.getNotifications();
+    expect(notifications).toHaveLength(1);
+    expect(notifications[0].id).toBe(1);
   });
 
   it('emits SYNC_STATUS with progress', async () => {

@@ -7,6 +7,7 @@ import type {
   WPComLikeResponse,
   WPComSubscription,
   WPComFollowingResponse,
+  WPComNotificationsResponse,
   CreateP2Params,
   CreateP2Response,
 } from './types';
@@ -160,6 +161,13 @@ export async function getFollowing(token: string): Promise<WPComSubscription[]> 
   }
 
   return all;
+}
+
+export async function getNotifications(token: string): Promise<WPComNotificationsResponse> {
+  return apiFetch<WPComNotificationsResponse>(
+    '/notifications/?number=100&fields=id,type,read,timestamp,subject,body,meta,title,url,noticon',
+    token,
+  );
 }
 
 export async function streamAISummary(

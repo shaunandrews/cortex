@@ -13,12 +13,12 @@
  */
 
 import { openDB, type IDBPDatabase } from 'idb';
-import type { WPComSite, WPComSubscription } from '../api/types';
+import type { WPComSite, WPComSubscription, WPComNotification } from '../api/types';
 import type { LightweightPost, SiteSyncState } from './protocol';
 import type { SavedItem, SavedGroup } from '../saved/types';
 
 const DB_NAME = 'cortex-sync';
-const DB_VERSION = 2;
+const DB_VERSION = 3;
 
 export interface SyncStoreDB {
   sites: {
@@ -44,6 +44,13 @@ export interface SyncStoreDB {
   following: {
     key: number; // blog_ID
     value: WPComSubscription;
+  };
+  notifications: {
+    key: number; // notification id
+    value: WPComNotification;
+    indexes: {
+      byType: string;
+    };
   };
   savedItems: {
     key: number; // auto-increment id
@@ -96,6 +103,12 @@ export class SyncStore {
         // Following/subscriptions store
         if (!db.objectStoreNames.contains('following')) {
           db.createObjectStore('following', { keyPath: 'blog_ID' });
+        }
+
+        // Notifications store (v3)
+        if (!db.objectStoreNames.contains('notifications')) {
+          const notifStore = db.createObjectStore('notifications', { keyPath: 'id' });
+          notifStore.createIndex('byType', 'type');
         }
 
         // Saved items store (v2)
@@ -213,6 +226,22 @@ export class SyncStore {
   }
 
   // ---------------------------------------------------------------------------
+  // Notifications
+  // ---------------------------------------------------------------------------
+
+  async putNotifications(notifications: WPComNotification[]): Promise<void> {
+    if (notifications.length === 0) return;
+    const db = await this.dbPromise;
+    const tx = db.transaction('notifications', 'readwrite');
+    await Promise.all([...notifications.map((n) => tx.store.put(n)), tx.done]);
+  }
+
+  async getNotifications(): Promise<WPComNotification[]> {
+    const db = await this.dbPromise;
+    return db.getAll('notifications');
+  }
+
+  // ---------------------------------------------------------------------------
   // Saved items
   // ---------------------------------------------------------------------------
 
@@ -322,7 +351,16 @@ export class SyncStore {
   async clearAll(): Promise<void> {
     const db = await this.dbPromise;
     const tx = db.transaction(
-      ['sites', 'posts', 'postContent', 'syncState', 'following', 'savedItems', 'savedGroups'],
+      [
+        'sites',
+        'posts',
+        'postContent',
+        'syncState',
+        'following',
+        'notifications',
+        'savedItems',
+        'savedGroups',
+      ],
       'readwrite',
     );
     await Promise.all([
@@ -331,6 +369,7 @@ export class SyncStore {
       tx.objectStore('postContent').clear(),
       tx.objectStore('syncState').clear(),
       tx.objectStore('following').clear(),
+      tx.objectStore('notifications').clear(),
       tx.objectStore('savedItems').clear(),
       tx.objectStore('savedGroups').clear(),
       tx.done,

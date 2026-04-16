@@ -407,6 +407,21 @@ body {
   flex-direction: column;
 }
 
+.home-section-title {
+  color: var(--wpds-color-fg-content-neutral-weak);
+}
+
+.home-mentions-section {
+  display: flex;
+  flex-direction: column;
+  margin-top: var(--wpds-dimension-padding-lg);
+}
+
+.home-mentions-list {
+  display: flex;
+  flex-direction: column;
+}
+
 .sidebar-search {
   display: flex;
   align-items: center;
@@ -479,56 +494,6 @@ body {
 
 .sidebar-group {
   padding-top: var(--wpds-dimension-padding-xs);
-}
-
-.sidebar-group-header {
-  position: sticky;
-  top: 0;
-  z-index: 1;
-  display: flex;
-  align-items: center;
-  gap: var(--wpds-dimension-gap-xs);
-  width: 100%;
-  padding: var(--wpds-dimension-padding-xs) var(--wpds-dimension-padding-sm);
-  border: none;
-  background: var(--wpds-color-bg-surface-neutral);
-  color: inherit;
-  font: inherit;
-  cursor: pointer;
-  text-align: left;
-  border-radius: var(--wpds-border-radius-sm);
-  transition: background-color var(--motion-duration-quick) var(--motion-easing-default);
-}
-
-.sidebar-group-header:hover {
-  background: var(--wpds-color-bg-surface-neutral-weak);
-}
-
-.sidebar-group-caret {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 16px;
-  height: 16px;
-  color: var(--wpds-color-fg-content-neutral-weak);
-  transform: rotate(90deg);
-  transition: transform var(--motion-duration-quick) var(--motion-easing-default);
-}
-
-.sidebar-group-header.is-collapsed .sidebar-group-caret {
-  transform: rotate(0deg);
-}
-
-.sidebar-group-name {
-  min-width: 0;
-  color: var(--wpds-color-fg-content-neutral-weak);
-  text-transform: uppercase;
-  letter-spacing: var(--wpds-typography-letter-spacing-sm);
-  font-size: var(--wpds-typography-font-size-xs);
-  font-weight: var(--wpds-typography-font-weight-medium);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .sidebar-group-body {
@@ -630,18 +595,6 @@ body {
   box-shadow: inset 0 0 0 2px var(--wpds-color-stroke-focus-brand);
   border-radius: var(--wpds-border-radius-md);
   background: color-mix(in srgb, var(--wpds-color-bg-brand-primary) 4%, transparent);
-}
-
-.sidebar-group-header.is-dragging {
-  cursor: grabbing;
-}
-
-.sidebar-group-header.is-dragging-overlay {
-  background: var(--wpds-color-bg-surface-neutral);
-  border: 1px solid var(--wpds-color-border-neutral-subtle);
-  box-shadow: var(--wpds-shadow-md);
-  border-radius: var(--wpds-border-radius-sm);
-  pointer-events: none;
 }
 
 /* Rename group dialog body */

@@ -105,6 +105,36 @@ export interface WPComFollowingResponse {
   total_subscriptions: number;
 }
 
+export interface WPComNotificationSubject {
+  text: string;
+  ranges?: { type?: string; url?: string; id?: number; indices?: number[] }[];
+}
+
+export interface WPComNotification {
+  id: number;
+  type: string;
+  read: number; // 0 = unread, 1 = read
+  timestamp: string;
+  subject: WPComNotificationSubject[];
+  body: WPComNotificationSubject[];
+  meta: {
+    ids: {
+      site?: number;
+      post?: number;
+      comment?: number;
+    };
+  };
+  title?: string;
+  url?: string;
+  noticon?: string;
+}
+
+export interface WPComNotificationsResponse {
+  notes: WPComNotification[];
+  last_seen_time?: number;
+  number?: number;
+}
+
 export interface CreateP2Params {
   blog_name: string;
   blog_title: string;

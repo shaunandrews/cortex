@@ -2,7 +2,12 @@ import 'fake-indexeddb/auto';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { QueryClient } from '@tanstack/react-query';
 import { SyncBridge } from './bridge';
-import type { WPComPostsResponse, WPComFollowingResponse, WPComSite } from '../api/types';
+import type {
+  WPComPostsResponse,
+  WPComFollowingResponse,
+  WPComSite,
+  WPComNotification,
+} from '../api/types';
 import type { InfiniteData } from '@tanstack/react-query';
 
 // ---------------------------------------------------------------------------
@@ -134,6 +139,21 @@ vi.mock('../api/wpcom', () => ({
       author: { name: 'Test', avatar_URL: '' },
     }),
   ),
+  getNotifications: vi.fn(() =>
+    Promise.resolve({
+      notes: [
+        {
+          id: 1,
+          type: 'mention',
+          read: 0,
+          timestamp: '2026-04-16T12:00:00Z',
+          subject: [{ text: 'Alice mentioned you' }],
+          body: [],
+          meta: { ids: { site: 10, post: 1 } },
+        },
+      ],
+    }),
+  ),
 }));
 
 // Clear IDB between tests
@@ -166,6 +186,15 @@ describe('SyncBridge (direct mode)', () => {
     const sites = queryClient.getQueryData<WPComSite[]>(['p2-sites']);
     expect(sites).toBeDefined();
     expect(sites!).toHaveLength(2);
+  });
+
+  it('populates React Query notifications cache after start', async () => {
+    await bridge.start('test-token', []);
+
+    const notifications = queryClient.getQueryData<WPComNotification[]>(['notifications']);
+    expect(notifications).toBeDefined();
+    expect(notifications!).toHaveLength(1);
+    expect(notifications![0].type).toBe('mention');
   });
 
   it('populates React Query following cache', async () => {
@@ -215,6 +244,10 @@ describe('SyncBridge (direct mode)', () => {
     const postsData = queryClient.getQueryData<InfiniteData<WPComPostsResponse>>(['p2-posts', 10]);
     expect(postsData).toBeDefined();
     expect(postsData!.pages[0].posts.length).toBeGreaterThan(0);
+
+    const notifications = queryClient.getQueryData<WPComNotification[]>(['notifications']);
+    expect(notifications).toBeDefined();
+    expect(notifications!.length).toBeGreaterThan(0);
 
     bridge2.stop();
   });

@@ -21,7 +21,12 @@ import type {
   SiteStatus,
   LightweightPost,
 } from './protocol';
-import type { WPComSite, WPComSubscription, WPComPostsResponse } from '../api/types';
+import type {
+  WPComSite,
+  WPComSubscription,
+  WPComNotification,
+  WPComPostsResponse,
+} from '../api/types';
 
 export interface SyncStatus {
   phase: SyncPhase;
@@ -128,6 +133,12 @@ export class SyncBridge {
     if (following.length > 0) {
       this.queryClient.setQueryData(['following'], following);
     }
+
+    // Hydrate notifications
+    const notifications = await this.engine.getNotifications();
+    if (notifications.length > 0) {
+      this.queryClient.setQueryData(['notifications'], notifications);
+    }
   }
 
   // ---------------------------------------------------------------------------
@@ -159,6 +170,9 @@ export class SyncBridge {
         break;
       case 'FOLLOWING_UPDATED':
         this.handleFollowingUpdated(msg.subscriptions);
+        break;
+      case 'NOTIFICATIONS_UPDATED':
+        this.handleNotificationsUpdated(msg.notifications);
         break;
       case 'POST_CONTENT_READY':
         this.handlePostContentReady(msg.siteId, msg.postId, msg.content);
@@ -197,6 +211,10 @@ export class SyncBridge {
 
   private handleFollowingUpdated(subscriptions: WPComSubscription[]): void {
     this.queryClient.setQueryData(['following'], subscriptions);
+  }
+
+  private handleNotificationsUpdated(notifications: WPComNotification[]): void {
+    this.queryClient.setQueryData(['notifications'], notifications);
   }
 
   private handlePostContentReady(siteId: number, postId: number, content: string): void {

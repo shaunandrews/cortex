@@ -3,7 +3,7 @@
  * Both sides import these types — keep free of DOM/React dependencies.
  */
 
-import type { WPComSite, WPComSubscription } from '../api/types';
+import type { WPComSite, WPComSubscription, WPComNotification } from '../api/types';
 
 // ---------------------------------------------------------------------------
 // Lightweight post — the feed-ready version stored in IDB (no full content)
@@ -79,6 +79,7 @@ export type WorkerMessage =
   | { type: 'SITES_UPDATED'; sites: WPComSite[] }
   | { type: 'POSTS_UPDATED'; siteId: number; posts: LightweightPost[] }
   | { type: 'FOLLOWING_UPDATED'; subscriptions: WPComSubscription[] }
+  | { type: 'NOTIFICATIONS_UPDATED'; notifications: WPComNotification[] }
   | {
       type: 'POST_CONTENT_READY';
       siteId: number;

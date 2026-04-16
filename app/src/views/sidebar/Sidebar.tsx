@@ -26,7 +26,7 @@ import {
 } from '@dnd-kit/sortable';
 import type { WPComSite } from '../../api/types';
 import type { Group, useSidebarGroups } from '../../hooks/useSidebarGroups';
-import { EmptyState, MenuItem, SiteIcon } from '../../components';
+import { EmptyState, GroupHeader, MenuItem, SiteIcon } from '../../components';
 import SidebarNav from './SidebarNav';
 import SidebarSearch from './SidebarSearch';
 import SidebarGroup from './SidebarGroup';
@@ -329,9 +329,11 @@ export default function Sidebar({
             />
           )}
           {activeDrag?.type === 'group-header' && (
-            <div className="sidebar-group-header is-dragging-overlay">
-              <span className="sidebar-group-name">{activeDrag.group.name}</span>
-            </div>
+            <GroupHeader
+              className="is-dragging-overlay"
+              label={activeDrag.group.name}
+              aria-hidden="true"
+            />
           )}
         </DragOverlay>
       </DndContext>

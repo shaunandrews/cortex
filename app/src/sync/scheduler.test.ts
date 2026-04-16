@@ -109,6 +109,23 @@ vi.mock('../api/wpcom', () => ({
     Promise.resolve(makeMockPostsResponse(siteId)),
   ),
   getPost: vi.fn(() => Promise.resolve(makeMockPostsResponse(10).posts[0])),
+  getNotifications: vi.fn(() =>
+    Promise.resolve({
+      notes: [
+        {
+          id: 1,
+          type: 'mention',
+          read: 0,
+          timestamp: '2026-04-16T12:00:00Z',
+          subject: [{ text: 'Alice mentioned you on Design Review' }],
+          body: [],
+          meta: { ids: { site: 10, post: 1 } },
+          title: 'Design Review',
+          url: '',
+        },
+      ],
+    }),
+  ),
 }));
 
 describe('Scheduler', () => {
@@ -150,6 +167,16 @@ describe('Scheduler', () => {
 
     const followingEvents = events.filter((e) => e.type === 'following');
     expect(followingEvents.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('emits notifications event during bootstrap', async () => {
+    await scheduler.start('test-token', []);
+
+    const notifEvents = events.filter((e) => e.type === 'notifications');
+    expect(notifEvents).toHaveLength(1);
+    if (notifEvents[0].type === 'notifications') {
+      expect(notifEvents[0].notifications).toHaveLength(1);
+    }
   });
 
   it('emits posts events during prefetch', async () => {

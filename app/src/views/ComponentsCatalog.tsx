@@ -14,6 +14,7 @@ import {
   ActionButton,
   AvatarButton,
   EmptyState,
+  GroupHeader,
   MenuItem,
   PanelHeader,
   PostRowCard,
@@ -95,6 +96,42 @@ export default function ComponentsCatalog() {
               </CatalogSpecimen>
               <CatalogSpecimen label="Hover / focus / active">
                 <MenuItem icon={<SiteIcon name="Try Me" />} label="Hover, tab, or click" />
+              </CatalogSpecimen>
+            </div>
+          </section>
+
+          {/* ───────────────────────── GroupHeader ───────────────────────── */}
+          <section className="catalog-section">
+            <header className="catalog-section-header">
+              <Text variant="heading-lg">GroupHeader</Text>
+              <Text variant="body-sm" className="catalog-section-desc">
+                Accordion-style section header with a trailing caret that rotates on{' '}
+                <code>isOpen</code>. Used in the sidebar for group headings (Favorites, Sites,
+                custom groups). Sticky by default so it pins as you scroll. Spreads props for
+                dnd-kit sortable attachment.
+              </Text>
+            </header>
+            <div className="catalog-specimens">
+              <CatalogSpecimen label="Open">
+                <GroupHeader label="Favorites" isOpen />
+              </CatalogSpecimen>
+              <CatalogSpecimen label="Closed">
+                <GroupHeader label="Favorites" />
+              </CatalogSpecimen>
+              <CatalogSpecimen label="Long label truncates">
+                <GroupHeader
+                  label="A very long group name that should truncate with an ellipsis"
+                  isOpen
+                />
+              </CatalogSpecimen>
+              <CatalogSpecimen label="Dragging">
+                <GroupHeader label="Design" isOpen isDragging />
+              </CatalogSpecimen>
+              <CatalogSpecimen label="Drag overlay">
+                <GroupHeader className="is-dragging-overlay" label="Engineering" isOpen />
+              </CatalogSpecimen>
+              <CatalogSpecimen label="Hover / focus / click">
+                <GroupHeader label="Try me" />
               </CatalogSpecimen>
             </div>
           </section>

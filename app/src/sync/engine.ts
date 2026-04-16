@@ -15,7 +15,7 @@ import { Fetcher } from './fetcher';
 import { Scheduler, type SchedulerEvent } from './scheduler';
 import { getPost } from '../api/wpcom';
 import type { BridgeMessage, WorkerMessage, LightweightPost } from './protocol';
-import type { WPComSite, WPComSubscription } from '../api/types';
+import type { WPComSite, WPComSubscription, WPComNotification } from '../api/types';
 
 export class SyncEngine {
   private store: SyncStore;
@@ -48,6 +48,12 @@ export class SyncEngine {
             type: 'POSTS_UPDATED',
             siteId: event.siteId,
             posts: event.posts,
+          });
+          break;
+        case 'notifications':
+          this.emit({
+            type: 'NOTIFICATIONS_UPDATED',
+            notifications: event.notifications,
           });
           break;
         case 'status':
@@ -194,6 +200,11 @@ export class SyncEngine {
   /** Get all following data from the store. */
   async getFollowing(): Promise<WPComSubscription[]> {
     return this.store.getFollowing();
+  }
+
+  /** Get all notifications from the store. */
+  async getNotifications(): Promise<WPComNotification[]> {
+    return this.store.getNotifications();
   }
 
   /** Get all posts grouped by site. */

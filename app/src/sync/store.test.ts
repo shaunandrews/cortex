@@ -2,7 +2,7 @@ import 'fake-indexeddb/auto';
 import { describe, it, expect, beforeEach } from 'vitest';
 import { SyncStore } from './store';
 import type { LightweightPost, SiteSyncState } from './protocol';
-import type { WPComSite, WPComSubscription } from '../api/types';
+import type { WPComSite, WPComSubscription, WPComNotification } from '../api/types';
 
 function makeSite(id: number): WPComSite {
   return {
@@ -204,6 +204,48 @@ describe('SyncStore', () => {
   // Maintenance
   // -------------------------------------------------------------------------
 
+  // -------------------------------------------------------------------------
+  // Notifications
+  // -------------------------------------------------------------------------
+
+  describe('notifications', () => {
+    function makeNotification(id: number, type = 'mention'): WPComNotification {
+      return {
+        id,
+        type,
+        read: 0,
+        timestamp: new Date(2026, 3, 16, 12, 0, id).toISOString(),
+        subject: [{ text: `Notification ${id}` }],
+        body: [],
+        meta: { ids: { site: 10, post: id } },
+      };
+    }
+
+    it('stores and retrieves notifications', async () => {
+      const notes = [makeNotification(1), makeNotification(2), makeNotification(3, 'comment')];
+      await store.putNotifications(notes);
+
+      const result = await store.getNotifications();
+      expect(result).toHaveLength(3);
+      expect(result.map((n) => n.id).sort()).toEqual([1, 2, 3]);
+    });
+
+    it('upserts notifications with the same id', async () => {
+      await store.putNotifications([makeNotification(1)]);
+      await store.putNotifications([{ ...makeNotification(1), read: 1 }]);
+
+      const result = await store.getNotifications();
+      expect(result).toHaveLength(1);
+      expect(result[0].read).toBe(1);
+    });
+
+    it('handles empty array gracefully', async () => {
+      await store.putNotifications([]);
+      const result = await store.getNotifications();
+      expect(result).toEqual([]);
+    });
+  });
+
   describe('clearAll', () => {
     it('clears all stores', async () => {
       await store.putSites([makeSite(1)]);
@@ -211,6 +253,17 @@ describe('SyncStore', () => {
       await store.putPostContent(1, 1, '<p>content</p>');
       await store.putSyncState({ siteId: 1, lastFetchedAt: 0, lastUnseenCount: 0, priority: 0 });
       await store.putFollowing([makeSubscription(1)]);
+      await store.putNotifications([
+        {
+          id: 1,
+          type: 'mention',
+          read: 0,
+          timestamp: '',
+          subject: [],
+          body: [],
+          meta: { ids: {} },
+        },
+      ]);
 
       await store.clearAll();
 
@@ -219,6 +272,7 @@ describe('SyncStore', () => {
       expect(await store.getPostContent(1, 1)).toBeUndefined();
       expect(await store.getAllSyncStates()).toEqual([]);
       expect(await store.getFollowing()).toEqual([]);
+      expect(await store.getNotifications()).toEqual([]);
     });
   });
 

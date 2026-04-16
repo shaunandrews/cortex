@@ -7,6 +7,9 @@ export type { AvatarButtonProps } from './AvatarButton/AvatarButton';
 export { default as EmptyState } from './EmptyState/EmptyState';
 export type { EmptyStateProps } from './EmptyState/EmptyState';
 
+export { default as GroupHeader } from './GroupHeader/GroupHeader';
+export type { GroupHeaderProps } from './GroupHeader/GroupHeader';
+
 export { default as MenuItem } from './MenuItem/MenuItem';
 export type { MenuItemProps } from './MenuItem/MenuItem';
 
