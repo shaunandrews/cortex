@@ -74,6 +74,13 @@ export function SyncProvider({ children }: { children: ReactNode }) {
     return () => document.removeEventListener('visibilitychange', handler);
   }, []);
 
+  // Keep Service Worker alive (production only)
+  useEffect(() => {
+    if (import.meta.env.DEV) return;
+    const timer = setInterval(() => bridgeRef.current?.sendKeepalive(), 20_000);
+    return () => clearInterval(timer);
+  }, []);
+
   return <SyncContext.Provider value={bridgeRef.current}>{children}</SyncContext.Provider>;
 }
 

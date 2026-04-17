@@ -1,0 +1,6 @@
+{
+  "framework": "vite",
+  "rewrites": [
+    { "source": "/((?!assets|service-worker|favicon|icons).*)", "destination": "/index.html" }
+  ]
+}

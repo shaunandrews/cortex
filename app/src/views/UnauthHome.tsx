@@ -10,7 +10,7 @@ export default function UnauthHome() {
 
     const params = new URLSearchParams({
       client_id: import.meta.env.VITE_WPCOM_CLIENT_ID,
-      redirect_uri: import.meta.env.VITE_WPCOM_REDIRECT_URI,
+      redirect_uri: `${window.location.origin}/callback`,
       response_type: 'token',
       scope: 'global',
       state,
