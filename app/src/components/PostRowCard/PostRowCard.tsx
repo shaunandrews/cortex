@@ -9,6 +9,10 @@ export type PostRowCardProps = Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'ty
   author?: ReactNode;
   /** URL of the author's avatar. */
   authorAvatar?: string;
+  /** Small site icon URL shown in the meta line. */
+  siteIcon?: string;
+  /** Site name shown in the meta line. */
+  siteName?: ReactNode;
   /** Pre-formatted relative time string (caller handles formatting). */
   date?: ReactNode;
   /** Selected/current state — for detail pairing with a feed. */
@@ -16,7 +20,7 @@ export type PostRowCardProps = Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'ty
 };
 
 const PostRowCard = forwardRef<HTMLButtonElement, PostRowCardProps>(function PostRowCard(
-  { title, author, authorAvatar, date, isSelected, className, ...rest },
+  { title, author, authorAvatar, siteIcon, siteName, date, isSelected, className, ...rest },
   ref,
 ) {
   const classes = ['post-row-card'];
@@ -32,10 +36,13 @@ const PostRowCard = forwardRef<HTMLButtonElement, PostRowCardProps>(function Pos
         <Text variant="body-md" className="post-row-card-title">
           {title}
         </Text>
-        {(author || date) && (
+        {(author || siteName || date) && (
           <Text variant="body-sm" className="post-row-card-meta">
+            {siteIcon && <img src={siteIcon} alt="" className="post-row-card-site-icon" />}
+            {siteName}
+            {siteName && author ? ' · ' : null}
             {author}
-            {author && date ? ' · ' : null}
+            {(siteName || author) && date ? ' · ' : null}
             {date}
           </Text>
         )}

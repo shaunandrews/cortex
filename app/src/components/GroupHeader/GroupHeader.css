@@ -18,10 +18,6 @@
   outline: none;
 }
 
-.group-header:hover {
-  background: var(--wpds-color-bg-interactive-neutral-weak-active);
-}
-
 .group-header:focus-visible {
   outline: 2px solid var(--wpds-color-stroke-focus-brand);
   outline-offset: -2px;
@@ -37,6 +33,7 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  transition: color var(--motion-duration-quick) var(--motion-easing-default);
 }
 
 .group-header-caret {
@@ -47,7 +44,14 @@
   height: 16px;
   color: var(--wpds-color-fg-content-neutral-weak);
   transform: rotate(0deg);
-  transition: transform var(--motion-duration-quick) var(--motion-easing-default);
+  transition:
+    transform var(--motion-duration-quick) var(--motion-easing-default),
+    color var(--motion-duration-quick) var(--motion-easing-default);
+}
+
+.group-header:hover .group-header-label,
+.group-header:hover .group-header-caret {
+  color: var(--wpds-color-fg-content-neutral);
 }
 
 .group-header.is-open .group-header-caret {

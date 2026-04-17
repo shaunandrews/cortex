@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { Text } from '@wordpress/ui';
 import { useAuth } from '../auth/AuthContext';
 import { useStarredSites } from '../hooks/useStarredSites';
@@ -26,7 +27,14 @@ function HomeMentions({
   onSelectPost: (siteId: number, postId: number) => void;
 }) {
   const { data: mentions } = useMentions();
+  const { data: sites } = useP2Sites();
   const recent = mentions.slice(0, 10);
+
+  const siteMap = useMemo(() => {
+    const map = new Map<number, WPComSite>();
+    sites?.forEach((s) => map.set(s.ID, s));
+    return map;
+  }, [sites]);
 
   if (!recent.length) return null;
 
@@ -39,10 +47,14 @@ function HomeMentions({
         {recent.map((note) => {
           const siteId = note.meta?.ids?.site;
           const postId = note.meta?.ids?.post;
+          const site = siteId ? siteMap.get(siteId) : undefined;
           return (
             <PostRowCard
               key={note.id}
               title={getMentionSubject(note)}
+              authorAvatar={note.icon}
+              siteIcon={site?.icon?.img}
+              siteName={site ? decodeEntities(site.name) : note.title || undefined}
               date={relativeTime(note.timestamp)}
               onClick={siteId && postId ? () => onSelectPost(siteId, postId) : undefined}
               disabled={!siteId || !postId}
