@@ -3,6 +3,7 @@ import type {
   WPComSitesResponse,
   WPComPostsResponse,
   WPComPost,
+  WPComComment,
   WPComCommentsResponse,
   WPComLikeResponse,
   WPComSubscription,
@@ -51,7 +52,7 @@ export async function getMe(token: string): Promise<WPComUser> {
 
 export async function getMySites(token: string): Promise<WPComSitesResponse> {
   return apiFetch<WPComSitesResponse>(
-    '/me/sites?fields=ID,name,description,URL,icon,options',
+    '/me/sites?fields=ID,name,description,URL,icon,options,post_count,subscribers_count,is_deleted,is_private,is_following,launch_status',
     token,
   );
 }
@@ -69,8 +70,43 @@ export async function getPostComments(
   postId: number,
 ): Promise<WPComCommentsResponse> {
   return apiFetch<WPComCommentsResponse>(
-    `/sites/${siteId}/posts/${postId}/replies/?fields=ID,author,date,content,parent&order=ASC&number=100`,
+    `/sites/${siteId}/posts/${postId}/replies/?fields=ID,author,date,content,parent,i_like,like_count&order=ASC&number=100`,
     token,
+  );
+}
+
+export async function createComment(
+  token: string,
+  siteId: number,
+  postId: number,
+  content: string,
+): Promise<WPComComment> {
+  return apiFetch<WPComComment>(`/sites/${siteId}/posts/${postId}/replies/new`, token, 'POST', {
+    body: { content },
+  });
+}
+
+export async function likeComment(
+  token: string,
+  siteId: number,
+  commentId: number,
+): Promise<WPComLikeResponse> {
+  return apiFetch<WPComLikeResponse>(
+    `/sites/${siteId}/comments/${commentId}/likes/new`,
+    token,
+    'POST',
+  );
+}
+
+export async function unlikeComment(
+  token: string,
+  siteId: number,
+  commentId: number,
+): Promise<WPComLikeResponse> {
+  return apiFetch<WPComLikeResponse>(
+    `/sites/${siteId}/comments/${commentId}/likes/mine/delete`,
+    token,
+    'POST',
   );
 }
 
@@ -173,12 +209,19 @@ export async function getNotifications(token: string): Promise<WPComNotification
   );
 }
 
-export async function streamAISummary(
+/** Stream a chat completion from the WP.com AI proxy. Returns the full response text. */
+async function streamAICompletion(
   token: string,
-  content: string,
-  onChunk: (text: string) => void,
-  signal?: AbortSignal,
+  systemPrompt: string,
+  userContent: string,
+  options: {
+    onChunk?: (text: string) => void;
+    signal?: AbortSignal;
+    maxTokens?: number;
+    temperature?: number;
+  } = {},
 ): Promise<string> {
+  const { onChunk, signal, maxTokens = 300, temperature = 0.3 } = options;
   const aiToken = import.meta.env.VITE_AI_SERVICE_KEY || token;
 
   const res = await fetch(`${API_BASE_V2}/ai-api-proxy/v1/chat/completions`, {
@@ -191,19 +234,12 @@ export async function streamAISummary(
     body: JSON.stringify({
       model: 'gpt-oss-120b',
       messages: [
-        {
-          role: 'system',
-          content:
-            'You are a summarization tool. You receive the text of an internal P2 post and output a concise summary as 2-3 bullet points. Focus on key decisions, action items, and important context. Each bullet should be one sentence. Output only the bullet points — no preamble, no commentary, no questions.',
-        },
-        {
-          role: 'user',
-          content,
-        },
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userContent },
       ],
       stream: true,
-      temperature: 0.3,
-      max_tokens: 300,
+      temperature,
+      max_tokens: maxTokens,
     }),
     signal,
   });
@@ -237,7 +273,7 @@ export async function streamAISummary(
           const chunk = parsed.choices?.[0]?.delta?.content;
           if (chunk) {
             full += chunk;
-            onChunk(chunk);
+            onChunk?.(chunk);
           }
         } catch {
           // skip malformed SSE chunks
@@ -251,6 +287,51 @@ export async function streamAISummary(
   }
 
   return full;
+}
+
+export async function streamAISummary(
+  token: string,
+  content: string,
+  onChunk: (text: string) => void,
+  signal?: AbortSignal,
+): Promise<string> {
+  return streamAICompletion(
+    token,
+    'You are a summarization tool. You receive the text of an internal P2 post and output a concise summary as 2-3 bullet points. Focus on key decisions, action items, and important context. Each bullet should be one sentence. Output only the bullet points — no preamble, no commentary, no questions.',
+    content,
+    { onChunk, signal, maxTokens: 300, temperature: 0.3 },
+  );
+}
+
+export interface SiteSuggestion {
+  siteId: number;
+  siteName: string;
+  reason: string;
+  confidence: 'high' | 'medium' | 'low';
+}
+
+/** Ask AI to analyze sites and return structured suggestions. */
+export async function getAISiteSuggestions(
+  token: string,
+  systemPrompt: string,
+  siteData: string,
+  signal?: AbortSignal,
+): Promise<SiteSuggestion[]> {
+  const raw = await streamAICompletion(token, systemPrompt, siteData, {
+    signal,
+    maxTokens: 2000,
+    temperature: 0.3,
+  });
+
+  // Extract JSON array from the response (may be wrapped in markdown code fences)
+  const jsonMatch = raw.match(/\[[\s\S]*\]/);
+  if (!jsonMatch) return [];
+
+  try {
+    return JSON.parse(jsonMatch[0]);
+  } catch {
+    return [];
+  }
 }
 
 export async function markAllAsSeen(
@@ -349,6 +430,17 @@ export async function createP2Site(
   }
 
   return data as CreateP2Response;
+}
+
+export async function followSite(token: string, siteId: number): Promise<{ subscribed: boolean }> {
+  return apiFetch<{ subscribed: boolean }>(`/sites/${siteId}/follows/new`, token, 'POST');
+}
+
+export async function unfollowSite(
+  token: string,
+  siteId: number,
+): Promise<{ subscribed: boolean }> {
+  return apiFetch<{ subscribed: boolean }>(`/sites/${siteId}/follows/mine/delete`, token, 'POST');
 }
 
 export async function markPostsAsSeen(

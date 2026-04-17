@@ -54,7 +54,11 @@ export function Text({
   );
 }
 
-export function Button({
+function ButtonIcon(props: { icon: unknown }) {
+  return <span data-testid="button-icon" data-icon={String(props.icon)} />;
+}
+
+function ButtonBase({
   children,
   onClick,
   style,
@@ -90,6 +94,8 @@ export function Button({
     </button>
   );
 }
+
+export const Button = Object.assign(ButtonBase, { Icon: ButtonIcon });
 
 export function Icon({ size }: { icon: unknown; size?: number }) {
   return <span data-testid="icon" style={{ fontSize: size }} />;
@@ -331,10 +337,7 @@ function PopoverClose({
   children,
   onClick,
   ...rest
-}: { children?: ReactNode; onClick?: (e: React.MouseEvent) => void } & Record<
-  string,
-  unknown
->) {
+}: { children?: ReactNode; onClick?: (e: React.MouseEvent) => void } & Record<string, unknown>) {
   const ctx = useContext(PopoverContext);
   return (
     <button

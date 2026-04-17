@@ -15,3 +15,5 @@ export const chevronDown = 'chevron-down-icon';
 export const more = 'more-icon';
 export const trash = 'trash-icon';
 export const pencil = 'pencil-icon';
+export const trendingDown = 'trending-down-icon';
+export const trendingUp = 'trending-up-icon';

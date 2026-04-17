@@ -16,6 +16,12 @@ export interface WPComSite {
   icon?: {
     img: string;
   };
+  post_count?: number;
+  subscribers_count?: number;
+  is_deleted?: boolean;
+  is_private?: boolean;
+  is_following?: boolean;
+  launch_status?: string;
   options?: {
     is_wpforteams_site?: boolean;
   };
@@ -71,6 +77,8 @@ export interface WPComComment {
   date: string;
   content: string;
   parent: { ID: number } | false;
+  i_like: boolean;
+  like_count: number;
 }
 
 export interface WPComCommentsResponse {
