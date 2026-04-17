@@ -45,9 +45,9 @@ Three-panel resizable layout (`react-resizable-panels`):
 ### API Layer
 
 - `api/types.ts` — TypeScript interfaces for all WP.com API responses
-- `api/wpcom.ts` — fetch functions for sites, posts, comments, likes, following, seen-posts
-- Three API base URLs: v1.1 (most endpoints), v1.2 (Reader following), wpcom/v2 (seen-posts)
-- See `docs/api.md` for endpoint details
+- `api/wpcom.ts` — fetch functions for sites, posts, comments, likes, following, seen-posts, AI summaries
+- Three API base URLs: v1.1 (most endpoints), v1.2 (Reader following + post lists), wpcom/v2 (seen-posts, AI proxy)
+- Post list fetches (`getSitePosts`, `getSitePostsLightweight`) use the Reader endpoint `/read/sites/$siteId/posts` (v1.2). Single post fetches (`getPost`) use `/sites/$siteId/posts/$postId` (v1.1).
 
 ### Data Flow & Sync Engine
 
@@ -56,18 +56,48 @@ Data is managed by a background sync engine (`sync/`) that prefetches all P2 sit
 - **SyncEngine** (`sync/engine.ts`) — portable class that runs in main thread (dev) or Service Worker (prod). Composes Scheduler, Fetcher, and Store.
 - **SyncBridge** (`sync/bridge.ts`) — translates engine events into `queryClient.setQueryData()` calls. Hydrates React Query from IndexedDB on startup.
 - **SyncProvider** (`sync/SyncProvider.tsx`) — React context that owns the bridge. Forwards auth token, starred sites, and tab visibility.
-- **IndexedDB** — persistent storage for sites, posts (lightweight), post content, sync state, and following data. Replaces the old localStorage cache.
+- **IndexedDB** (`sync/store.ts`, DB name: `cortex-sync`, version 5) — persistent storage for sites, posts (lightweight), post content, sync state, following, notifications, saved items/groups, AI summaries, and seen posts. Accessed via `getSharedStore()` singleton.
 
 Hooks still work as before — they read from React Query. The sync engine populates the cache in the background so data is ready when a hook mounts. If the sync engine hasn't reached a site, hooks fall back to their normal fetch.
 
 Key hooks:
 - `hooks/useP2Sites` — P2 sites (filtered from `/me/sites` by `is_wpforteams_site`)
-- `hooks/useP2Posts` / `useP2Post` — post lists and single posts
+- `hooks/useP2Posts` / `useP2Post` — post lists and single posts. `useP2Posts` fetches from the Reader endpoint (`/read/sites/$siteId/posts`, v1.2).
 - `hooks/useFollowing` — Reader subscriptions with `unseen_count` per site
-- `hooks/useMarkAsSeen` — mutation to mark posts as read (optimistic update)
+- `hooks/useMarkAsSeen` — mutation to mark posts as read via `/seen-posts/seen/blog/new`. Also exports `useMarkPostSeen` (optimistic cache update + IDB persistence + API call in one) and `useMarkAllAsSeen`.
+- `hooks/useSeenPosts` — provides a `Set<string>` of seen post keys (`"siteId-postId"`), loaded from IndexedDB `seenPosts` store on mount. Used by feed rendering to determine the `is-seen` CSS class.
+- `hooks/usePostSummary` — AI summary for long posts. Checks IndexedDB first, then streams from the AI API. Only generates for posts with 500+ chars of plaintext.
 - `hooks/usePostComments` / `useToggleLike` — comments and like toggle
 - `hooks/useSidebarGroups` — groups, membership, sort, drag state; the sidebar's single source of truth. Writes to `cortex_sidebar_groups`, `cortex_sidebar_membership`, and `cortex_sidebar_last_group` in localStorage.
 - `hooks/useStarredSites` — thin reader over the sidebar membership storage. Returns `starredIds` (sites in the Favorites group). Consumed by `SyncProvider` to prioritize prefetch.
+
+### Seen/Unseen Posts
+
+Tracks which posts the user has read. Two indicators: a blue dot + accent title on unread posts in the feed, and a red `unseen_count` badge on sidebar site items.
+
+**Data flow:**
+- `unseen_count` comes from the server via `/read/following/mine` subscriptions. It gates whether blue dots appear at all — if a site has `unseen_count: 0`, no posts show as unread.
+- Per-post seen state is tracked locally in IndexedDB (`seenPosts` store, keyed by `[siteId, postId]`). The server's `/read/sites/$siteId/posts` endpoint has a bug where `is_seen` is only set on AFK-tagged posts, so we can't rely on it.
+- `useSeenPosts` hook loads the seen set from IDB into a React Query cache entry (`['seen-posts']`). Feed rendering checks both `feedPost.is_seen` (from API, if present) and the local set.
+- `useMarkPostSeen` handles marking: updates the `['seen-posts']` cache, writes to IDB, and fires `markPostsAsSeen` API call (so Calypso/mobile stay in sync).
+
+**When a post is opened:**
+1. `PostDetailPanel` calls `useMarkPostSeen` → marks the origin post
+2. For x-posts, the click/keyboard handler in `AuthedHome` also marks the x-post itself on the current site
+
+**CSS:** `.post:not(.is-seen)` gets accent-colored title + blue dot via `::before`. `.post.is-seen` gets muted title/author, no accent on hover.
+
+### AI Summaries
+
+Long posts (500+ chars of plaintext) get an AI-generated bullet-point summary in the detail panel.
+
+- `usePostSummary` hook checks IndexedDB (`summaries` store) first — if a cached summary exists, it hydrates React Query and skips generation. Otherwise it streams from `/wpcom/v2/ai-api-proxy/v1/chat/completions` (model: `gpt-oss-120b`).
+- Summaries persist in IDB across refreshes. The `regenerate` function allows manual re-generation.
+- A system message constrains the model to output only bullet points — no preamble, no conversational responses.
+
+### Keyboard Navigation
+
+`j`/`ArrowDown` and `k`/`ArrowUp` navigate the feed when a site is selected. Navigation selects the post (opens it in the detail panel) and marks x-posts as seen. Keyboard input is ignored when focus is in a text input/textarea.
 
 ### X-Posts
 
