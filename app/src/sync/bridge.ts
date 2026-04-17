@@ -40,6 +40,7 @@ export class SyncBridge {
   private mode: 'direct' | 'worker';
   private engine: SyncEngine | null = null;
   private statusListeners: ((status: SyncStatus) => void)[] = [];
+  private seenPostIds = new Set<string>();
   private status: SyncStatus = {
     phase: 'idle',
     progress: { fetched: 0, total: 0 },
@@ -98,6 +99,12 @@ export class SyncBridge {
     }
   }
 
+  sendKeepalive(): void {
+    if (this.mode === 'worker') {
+      this.sendToBridge({ type: 'KEEPALIVE' });
+    }
+  }
+
   requestPostContent(siteId: number, postId: number): void {
     if (this.mode === 'direct') {
       this.engine?.requestPostContent(siteId, postId);
@@ -112,6 +119,9 @@ export class SyncBridge {
 
   async hydrateFromStore(): Promise<void> {
     if (this.mode !== 'direct' || !this.engine) return;
+
+    // Load seen post IDs so hydration can apply them
+    this.seenPostIds = await this.engine.getSeenPostIds();
 
     // Hydrate sites
     const sites = await this.engine.getSites();
@@ -241,9 +251,14 @@ export class SyncBridge {
       (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
     );
 
+    // Apply seen state from the local IDB seenPosts store
+    const withSeen = sorted.map((p) =>
+      !p.is_seen && this.seenPostIds.has(`${siteId}-${p.ID}`) ? { ...p, is_seen: true } : p,
+    );
+
     // Build InfiniteData structure for useP2Posts
     const infiniteData: InfiniteData<WPComPostsResponse> = {
-      pages: [{ found: sorted.length, posts: sorted }],
+      pages: [{ found: withSeen.length, posts: withSeen }],
       pageParams: [1],
     };
 
@@ -251,9 +266,22 @@ export class SyncBridge {
       ['p2-posts', siteId],
       (existing: InfiniteData<WPComPostsResponse> | undefined) => {
         if (existing && existing.pages.length > 0) {
-          // Merge: replace first page with synced data, keep user-loaded pages
+          // Also preserve is_seen from existing React Query cache (optimistic updates)
+          const cacheSeenIds = new Set<number>();
+          for (const page of existing.pages) {
+            for (const p of page.posts) {
+              if (p.is_seen) cacheSeenIds.add(p.ID);
+            }
+          }
+          const mergedPosts = withSeen.map((p) =>
+            !p.is_seen && cacheSeenIds.has(p.ID) ? { ...p, is_seen: true } : p,
+          );
+
           const merged = { ...existing };
-          merged.pages = [{ found: sorted.length, posts: sorted }, ...existing.pages.slice(1)];
+          merged.pages = [
+            { found: mergedPosts.length, posts: mergedPosts },
+            ...existing.pages.slice(1),
+          ];
           return merged;
         }
         return infiniteData;

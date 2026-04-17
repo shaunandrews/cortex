@@ -20,6 +20,7 @@ export interface LightweightPost {
   author: { name: string; avatar_URL: string };
   like_count?: number;
   i_like?: boolean;
+  is_seen?: boolean;
   tags?: Record<string, { name: string; slug: string }>;
   metadata?: { id: string; key: string; value: string }[];
   post_thumbnail?: { URL: string; width: number; height: number } | null;

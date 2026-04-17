@@ -217,6 +217,11 @@ export class SyncEngine {
     return this.store.getPostContent(siteId, postId);
   }
 
+  /** Get all seen post IDs from the store. */
+  async getSeenPostIds(): Promise<Set<string>> {
+    return this.store.getSeenPostIds();
+  }
+
   // ---------------------------------------------------------------------------
   // Internal
   // ---------------------------------------------------------------------------

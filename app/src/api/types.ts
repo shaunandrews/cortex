@@ -52,6 +52,7 @@ export interface WPComPost {
   author: WPComPostAuthor;
   like_count?: number;
   i_like?: boolean;
+  is_seen?: boolean;
   tags?: Record<string, { name: string; slug: string }>;
   categories?: Record<string, { name: string; slug: string }>;
   metadata?: WPComPostMeta[];
@@ -127,6 +128,7 @@ export interface WPComNotification {
   title?: string;
   url?: string;
   noticon?: string;
+  icon?: string;
 }
 
 export interface WPComNotificationsResponse {

@@ -18,7 +18,7 @@ import type { LightweightPost, SiteSyncState } from './protocol';
 import type { SavedItem, SavedGroup } from '../saved/types';
 
 const DB_NAME = 'cortex-sync';
-const DB_VERSION = 3;
+const DB_VERSION = 5;
 
 export interface SyncStoreDB {
   sites: {
@@ -65,6 +65,14 @@ export interface SyncStoreDB {
   savedGroups: {
     key: number; // auto-increment id
     value: SavedGroup;
+  };
+  summaries: {
+    key: [number, number]; // [siteId, postId]
+    value: { siteId: number; postId: number; summary: string; generatedAt: number };
+  };
+  seenPosts: {
+    key: [number, number]; // [siteId, postId]
+    value: { siteId: number; postId: number; seenAt: number };
   };
 }
 
@@ -128,6 +136,20 @@ export class SyncStore {
           db.createObjectStore('savedGroups', {
             keyPath: 'id',
             autoIncrement: true,
+          });
+        }
+
+        // AI summaries store (v4)
+        if (!db.objectStoreNames.contains('summaries')) {
+          db.createObjectStore('summaries', {
+            keyPath: ['siteId', 'postId'],
+          });
+        }
+
+        // Seen posts store (v5) — tracks which posts the user has read
+        if (!db.objectStoreNames.contains('seenPosts')) {
+          db.createObjectStore('seenPosts', {
+            keyPath: ['siteId', 'postId'],
           });
         }
       },
@@ -345,6 +367,36 @@ export class SyncStore {
   }
 
   // ---------------------------------------------------------------------------
+  // AI Summaries
+  // ---------------------------------------------------------------------------
+
+  async putSummary(siteId: number, postId: number, summary: string): Promise<void> {
+    const db = await this.dbPromise;
+    await db.put('summaries', { siteId, postId, summary, generatedAt: Date.now() });
+  }
+
+  async getSummary(siteId: number, postId: number): Promise<string | undefined> {
+    const db = await this.dbPromise;
+    const row = await db.get('summaries', [siteId, postId]);
+    return row?.summary;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Seen Posts
+  // ---------------------------------------------------------------------------
+
+  async markSeen(siteId: number, postId: number): Promise<void> {
+    const db = await this.dbPromise;
+    await db.put('seenPosts', { siteId, postId, seenAt: Date.now() });
+  }
+
+  async getSeenPostIds(): Promise<Set<string>> {
+    const db = await this.dbPromise;
+    const all = await db.getAll('seenPosts');
+    return new Set(all.map((r) => `${r.siteId}-${r.postId}`));
+  }
+
+  // ---------------------------------------------------------------------------
   // Maintenance
   // ---------------------------------------------------------------------------
 
@@ -360,6 +412,8 @@ export class SyncStore {
         'notifications',
         'savedItems',
         'savedGroups',
+        'summaries',
+        'seenPosts',
       ],
       'readwrite',
     );
@@ -372,6 +426,8 @@ export class SyncStore {
       tx.objectStore('notifications').clear(),
       tx.objectStore('savedItems').clear(),
       tx.objectStore('savedGroups').clear(),
+      tx.objectStore('summaries').clear(),
+      tx.objectStore('seenPosts').clear(),
       tx.done,
     ]);
   }

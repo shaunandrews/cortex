@@ -677,8 +677,25 @@ body {
 }
 
 .post {
+  position: relative;
   padding: var(--wpds-dimension-padding-sm) 0;
   cursor: pointer;
+}
+
+.post:not(.is-seen)::before {
+  content: '';
+  position: absolute;
+  left: -12px;
+  top: calc(var(--wpds-dimension-padding-sm) + 15px);
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--wpds-color-fg-interactive-brand);
+}
+
+.post:hover:not(.is-seen)::before,
+.post.is-selected:not(.is-seen)::before {
+  left: calc(var(--wpds-dimension-padding-lg) - 12px);
 }
 
 .post:hover {
@@ -740,6 +757,22 @@ body {
   letter-spacing: -0.01em;
   transition: color 0.15s;
   text-wrap: pretty;
+  color: var(--wpds-color-fg-interactive-brand);
+}
+
+/* Read posts: mute everything */
+.post.is-seen .post-title,
+.post.is-seen .xpost-title {
+  color: var(--wpds-color-fg-content-neutral-weak);
+}
+
+.post.is-seen .post-thread-author {
+  color: var(--wpds-color-fg-content-neutral-weak);
+}
+
+.post.is-seen:hover .post-title,
+.post.is-seen:hover .xpost-title {
+  color: var(--wpds-color-fg-content-neutral-weak);
 }
 
 /* X-post compact style */

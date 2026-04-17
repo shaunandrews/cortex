@@ -5,6 +5,7 @@ import {
   chevronUp,
   comment as commentIcon,
   archive,
+  external,
   starFilled,
   starEmpty,
 } from '@wordpress/icons';
@@ -13,7 +14,7 @@ import { useP2Sites } from '../hooks/useP2Sites';
 import { usePostComments } from '../hooks/usePostComments';
 import { useToggleLike } from '../hooks/useToggleLike';
 import { usePostSummary } from '../hooks/usePostSummary';
-import { useMarkAsSeen } from '../hooks/useMarkAsSeen';
+import { useMarkPostSeen } from '../hooks/useMarkAsSeen';
 import { useSavedLookup, useSavePost, useSaveComment, useUnsaveItem } from '../saved/useSavedItems';
 import { relativeTime } from '../lib/relativeTime';
 import Markdown from 'react-markdown';
@@ -50,7 +51,7 @@ export default function PostDetailPanel({ siteId, postId, onClose }: PostDetailP
   const saveComment = useSaveComment();
   const unsaveItem = useUnsaveItem();
 
-  const markAsSeen = useMarkAsSeen();
+  const markPostSeen = useMarkPostSeen();
   const markedSeenRef = useRef(new Set<string>());
 
   // Close comments drawer when switching posts
@@ -63,7 +64,7 @@ export default function PostDetailPanel({ siteId, postId, onClose }: PostDetailP
     const key = `${siteId}-${postId}`;
     if (markedSeenRef.current.has(key)) return;
     markedSeenRef.current.add(key);
-    markAsSeen.mutate({ blogId: siteId, postIds: [postId] });
+    markPostSeen(siteId, postId);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [siteId, postId]);
 
@@ -106,14 +107,24 @@ export default function PostDetailPanel({ siteId, postId, onClose }: PostDetailP
           </Text>
         }
         end={
-          <IconButton
-            variant="minimal"
-            tone="neutral"
-            size="compact"
-            icon={closeSmall}
-            label="Close"
-            onClick={onClose}
-          />
+          <>
+            <IconButton
+              variant="minimal"
+              tone="neutral"
+              size="compact"
+              icon={external}
+              label="Open in new tab"
+              onClick={() => window.open(post.URL, '_blank')}
+            />
+            <IconButton
+              variant="minimal"
+              tone="neutral"
+              size="compact"
+              icon={closeSmall}
+              label="Close"
+              onClick={onClose}
+            />
+          </>
         }
       />
       <article className="post-detail-article">

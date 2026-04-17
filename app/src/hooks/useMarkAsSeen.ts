@@ -1,7 +1,47 @@
+import { useCallback, useEffect, useRef } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { markPostsAsSeen, markAllAsSeen } from '../api/wpcom';
 import { useAuth } from '../auth/AuthContext';
+import { getSharedStore } from '../sync/store';
 import type { WPComSubscription } from '../api/types';
+
+/**
+ * Optimistically set is_seen on a post in the feed cache, persist to IDB, and fire the API call.
+ * Used by both PostDetailPanel (origin posts) and AuthedHome (x-posts).
+ */
+export function useMarkPostSeen() {
+  const { token } = useAuth();
+  const queryClient = useQueryClient();
+  const markAsSeen = useMarkAsSeen();
+  const mutateRef = useRef(markAsSeen.mutate);
+  useEffect(() => {
+    mutateRef.current = markAsSeen.mutate;
+  });
+
+  return useCallback(
+    (siteId: number, postId: number) => {
+      const key = `${siteId}-${postId}`;
+
+      // Update the seen-posts set (used by rendering to determine is-seen class)
+      queryClient.setQueryData<Set<string>>(['seen-posts'], (old) => {
+        const next = new Set(old);
+        next.add(key);
+        return next;
+      });
+
+      // Persist to IDB so it survives refresh
+      getSharedStore()
+        .markSeen(siteId, postId)
+        .catch(() => {});
+
+      // Fire the API call (also optimistically updates unseen_count on subscriptions)
+      if (token) {
+        mutateRef.current({ blogId: siteId, postIds: [postId] });
+      }
+    },
+    [token, queryClient],
+  );
+}
 
 export function useMarkAsSeen() {
   const { token } = useAuth();

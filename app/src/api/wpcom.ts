@@ -110,8 +110,10 @@ export async function getSitePosts(
   page: number = 1,
 ): Promise<WPComPostsResponse> {
   return apiFetch<WPComPostsResponse>(
-    `/sites/${siteId}/posts?fields=ID,title,content,excerpt,date,URL,author,tags,metadata&order_by=date&order=DESC&number=20&page=${page}`,
+    `/read/sites/${siteId}/posts?order=DESC&number=20&page=${page}`,
     token,
+    'GET',
+    { base: API_BASE_V12 },
   );
 }
 
@@ -124,14 +126,15 @@ export async function getSitePostsLightweight(
 ): Promise<WPComPostsResponse> {
   const params = new URLSearchParams({
     fields:
-      'ID,site_ID,title,excerpt,date,modified,URL,author,tags,metadata,post_thumbnail,like_count,i_like',
-    order_by: 'date',
+      'ID,site_ID,title,excerpt,date,modified,URL,author,tags,metadata,post_thumbnail,like_count,i_like,is_seen',
     order: 'DESC',
     number: '20',
     page: String(page),
   });
   if (modifiedAfter) params.set('modified_after', modifiedAfter);
-  return apiFetch<WPComPostsResponse>(`/sites/${siteId}/posts?${params}`, token);
+  return apiFetch<WPComPostsResponse>(`/read/sites/${siteId}/posts?${params}`, token, 'GET', {
+    base: API_BASE_V12,
+  });
 }
 
 /** Fetch just page 1 of following — used by sync engine for lightweight change detection. */
@@ -165,7 +168,7 @@ export async function getFollowing(token: string): Promise<WPComSubscription[]> 
 
 export async function getNotifications(token: string): Promise<WPComNotificationsResponse> {
   return apiFetch<WPComNotificationsResponse>(
-    '/notifications/?number=100&fields=id,type,read,timestamp,subject,body,meta,title,url,noticon',
+    '/notifications/?number=100&fields=id,type,read,timestamp,subject,body,meta,title,url,noticon,icon',
     token,
   );
 }
@@ -189,8 +192,13 @@ export async function streamAISummary(
       model: 'gpt-oss-120b',
       messages: [
         {
+          role: 'system',
+          content:
+            'You are a summarization tool. You receive the text of an internal P2 post and output a concise summary as 2-3 bullet points. Focus on key decisions, action items, and important context. Each bullet should be one sentence. Output only the bullet points — no preamble, no commentary, no questions.',
+        },
+        {
           role: 'user',
-          content: `Summarize the following P2 post concisely in 2-3 bullet points. Focus on key decisions, action items, and important context. Be brief — each point should be one sentence.\n\n${content}`,
+          content,
         },
       ],
       stream: true,
