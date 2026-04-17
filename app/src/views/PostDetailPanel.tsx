@@ -9,9 +9,10 @@ import {
   starFilled,
   starEmpty,
 } from '@wordpress/icons';
+import type { WPComComment } from '../api/types';
 import { useP2Post } from '../hooks/useP2Post';
 import { useP2Sites } from '../hooks/useP2Sites';
-import { usePostComments } from '../hooks/usePostComments';
+import { usePostComments, useCreateComment, useToggleCommentLike } from '../hooks/usePostComments';
 import { useToggleLike } from '../hooks/useToggleLike';
 import { usePostSummary } from '../hooks/usePostSummary';
 import { useMarkPostSeen } from '../hooks/useMarkAsSeen';
@@ -24,6 +25,36 @@ function decodeEntities(text: string): string {
   const el = document.createElement('textarea');
   el.innerHTML = text;
   return el.value;
+}
+
+interface ThreadedComment extends WPComComment {
+  children: ThreadedComment[];
+  depth: number;
+}
+
+function threadComments(comments: WPComComment[]): ThreadedComment[] {
+  const map = new Map<number, ThreadedComment>();
+  const roots: ThreadedComment[] = [];
+
+  // First pass: wrap every comment
+  for (const c of comments) {
+    map.set(c.ID, { ...c, children: [], depth: 0 });
+  }
+
+  // Second pass: attach children to parents
+  for (const c of comments) {
+    const node = map.get(c.ID)!;
+    const parentId = c.parent && c.parent.ID;
+    if (parentId && map.has(parentId)) {
+      const parent = map.get(parentId)!;
+      node.depth = parent.depth + 1;
+      parent.children.push(node);
+    } else {
+      roots.push(node);
+    }
+  }
+
+  return roots;
 }
 
 interface PostDetailPanelProps {
@@ -44,7 +75,11 @@ export default function PostDetailPanel({ siteId, postId, onClose }: PostDetailP
     regenerate: regenerateSummary,
   } = usePostSummary(siteId, postId, post?.content);
 
+  const createComment = useCreateComment(siteId, postId);
+  const toggleCommentLike = useToggleCommentLike(siteId, postId);
   const [commentsOpen, setCommentsOpen] = useState(false);
+  const [commentText, setCommentText] = useState('');
+  const commentInputRef = useRef<HTMLTextAreaElement>(null);
 
   const savedLookup = useSavedLookup();
   const savePost = useSavePost();
@@ -54,9 +89,10 @@ export default function PostDetailPanel({ siteId, postId, onClose }: PostDetailP
   const markPostSeen = useMarkPostSeen();
   const markedSeenRef = useRef(new Set<string>());
 
-  // Close comments drawer when switching posts
+  // Close comments drawer and clear draft when switching posts
   useEffect(() => {
     setCommentsOpen(false);
+    setCommentText('');
   }, [postId]);
 
   // Mark post as seen when opened
@@ -97,6 +133,57 @@ export default function PostDetailPanel({ siteId, postId, onClose }: PostDetailP
   const postKey = `post:${post.site_ID}:${post.ID}`;
   const savedId = savedLookup.get(postKey);
   const isSaved = savedId != null;
+
+  function renderComment(c: ThreadedComment): React.ReactNode {
+    const commentKey = `comment:${post!.site_ID}:${post!.ID}:${c.ID}`;
+    const cSavedId = savedLookup.get(commentKey);
+    const cIsSaved = cSavedId != null;
+    return (
+      <div key={c.ID} className={`comment${c.depth > 0 ? ' comment-nested' : ''}`}>
+        <div className="comment-header">
+          <img src={c.author.avatar_URL} alt={c.author.name} className="comment-avatar" />
+          <Text variant="body-sm" className="comment-author">
+            {c.author.name}
+          </Text>
+          <Text variant="body-sm" style={{ color: 'var(--wpds-color-fg-content-neutral-weak)' }}>
+            {relativeTime(c.date)}
+          </Text>
+          <button
+            className={`comment-save-button${cIsSaved ? ' is-saved' : ''}`}
+            onClick={() => {
+              if (cIsSaved) {
+                unsaveItem.mutate(cSavedId);
+              } else {
+                const site = sites?.find((s) => s.ID === post!.site_ID);
+                saveComment.mutate({
+                  comment: c,
+                  post: post!,
+                  siteName: site?.name ?? post!.site_name ?? '',
+                  siteURL: site?.URL ?? post!.site_URL ?? '',
+                });
+              }
+            }}
+          >
+            <Icon icon={archive} size={12} />
+            <span>{cIsSaved ? 'Saved' : 'Save'}</span>
+          </button>
+        </div>
+        <div className="comment-body" dangerouslySetInnerHTML={{ __html: c.content }} />
+        <div className="comment-actions">
+          <button
+            className={`comment-like-button${c.i_like ? ' is-liked' : ''}`}
+            onClick={() => toggleCommentLike.mutate({ commentId: c.ID, liked: c.i_like })}
+          >
+            <Icon icon={c.i_like ? starFilled : starEmpty} size={14} />
+            {c.like_count > 0 && <span>{c.like_count}</span>}
+          </button>
+        </div>
+        {c.children.length > 0 && (
+          <div className="comment-replies">{c.children.map(renderComment)}</div>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className="post-detail">
@@ -232,17 +319,18 @@ export default function PostDetailPanel({ siteId, postId, onClose }: PostDetailP
           >
             {isSaved ? 'Saved' : 'Save'}
           </ActionButton>
-          {commentsData && commentsData.comments.length > 0 && (
-            <button
-              className="comments-drawer-toggle"
-              onClick={() => setCommentsOpen(!commentsOpen)}
-            >
-              <div className="comments-drawer-info">
-                <Icon icon={commentIcon} size={18} />
-                <Text variant="body-sm" className="comments-drawer-count">
-                  {commentsData.found === 1 ? '1 comment' : `${commentsData.found} comments`}
-                </Text>
-              </div>
+          <button className="comments-drawer-toggle" onClick={() => setCommentsOpen(!commentsOpen)}>
+            <div className="comments-drawer-info">
+              <Icon icon={commentIcon} size={18} />
+              <Text variant="body-sm" className="comments-drawer-count">
+                {commentsData && commentsData.found > 0
+                  ? commentsData.found === 1
+                    ? '1 comment'
+                    : `${commentsData.found} comments`
+                  : 'Reply'}
+              </Text>
+            </div>
+            {commentsData && commentsData.comments.length > 0 && (
               <div className="comments-facepile">
                 {(() => {
                   const seen = new Set<string>();
@@ -263,68 +351,53 @@ export default function PostDetailPanel({ siteId, postId, onClose }: PostDetailP
                     ));
                 })()}
               </div>
-              <Icon icon={chevronUp} size={20} />
-            </button>
-          )}
+            )}
+            <Icon icon={chevronUp} size={20} />
+          </button>
         </div>
-        {commentsData && commentsData.comments.length > 0 && (
-          <div className={`collapsible${commentsOpen ? ' is-open' : ''}`}>
-            <div className="collapsible-body">
-              <div className="comments-drawer-content">
+        <div className={`collapsible${commentsOpen ? ' is-open' : ''}`}>
+          <div className="collapsible-body">
+            <div className="comments-drawer-content">
+              {commentsData && commentsData.comments.length > 0 && (
                 <div className="comments-list">
-                  {commentsData.comments.map((c) => {
-                    const commentKey = `comment:${post.site_ID}:${post.ID}:${c.ID}`;
-                    const cSavedId = savedLookup.get(commentKey);
-                    const cIsSaved = cSavedId != null;
-                    return (
-                      <div key={c.ID} className={`comment${c.parent ? ' comment-nested' : ''}`}>
-                        <div className="comment-header">
-                          <img
-                            src={c.author.avatar_URL}
-                            alt={c.author.name}
-                            className="comment-avatar"
-                          />
-                          <Text variant="body-sm" className="comment-author">
-                            {c.author.name}
-                          </Text>
-                          <Text
-                            variant="body-sm"
-                            style={{ color: 'var(--wpds-color-fg-content-neutral-weak)' }}
-                          >
-                            {relativeTime(c.date)}
-                          </Text>
-                          <button
-                            className={`comment-save-button${cIsSaved ? ' is-saved' : ''}`}
-                            onClick={() => {
-                              if (cIsSaved) {
-                                unsaveItem.mutate(cSavedId);
-                              } else {
-                                const site = sites?.find((s) => s.ID === post.site_ID);
-                                saveComment.mutate({
-                                  comment: c,
-                                  post,
-                                  siteName: site?.name ?? post.site_name ?? '',
-                                  siteURL: site?.URL ?? post.site_URL ?? '',
-                                });
-                              }
-                            }}
-                          >
-                            <Icon icon={archive} size={12} />
-                            <span>{cIsSaved ? 'Saved' : 'Save'}</span>
-                          </button>
-                        </div>
-                        <div
-                          className="comment-body"
-                          dangerouslySetInnerHTML={{ __html: c.content }}
-                        />
-                      </div>
-                    );
-                  })}
+                  {threadComments(commentsData.comments).map(renderComment)}
                 </div>
+              )}
+              <div className="comment-form">
+                <textarea
+                  ref={commentInputRef}
+                  className="comment-form-input"
+                  placeholder="Write a comment..."
+                  value={commentText}
+                  onChange={(e) => setCommentText(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && (e.metaKey || e.ctrlKey) && commentText.trim()) {
+                      e.preventDefault();
+                      createComment.mutate(commentText.trim(), {
+                        onSuccess: () => setCommentText(''),
+                      });
+                    }
+                  }}
+                  rows={1}
+                  disabled={createComment.isPending}
+                />
+                <button
+                  className="comment-form-submit"
+                  onClick={() => {
+                    if (commentText.trim()) {
+                      createComment.mutate(commentText.trim(), {
+                        onSuccess: () => setCommentText(''),
+                      });
+                    }
+                  }}
+                  disabled={!commentText.trim() || createComment.isPending}
+                >
+                  {createComment.isPending ? 'Posting...' : 'Comment'}
+                </button>
               </div>
             </div>
           </div>
-        )}
+        </div>
       </footer>
     </div>
   );
