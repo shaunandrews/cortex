@@ -10,10 +10,12 @@ type Props = {
   group: Group;
   sites: WPComSite[];
   unseenMap: Map<number, number>;
+  starredIds: Set<number>;
   selectedSiteId: number | null;
   focusedIndex: number;
   startIndex: number;
   onSelectSite: (siteId: number) => void;
+  onToggleFavorite: (siteId: number) => void;
   onToggleCollapse: (e: MouseEvent<HTMLElement>) => void;
   onGroupContextMenu: (e: MouseEvent<HTMLElement>) => void;
   onSiteContextMenu: (siteId: number, e: MouseEvent<HTMLElement>) => void;
@@ -23,10 +25,12 @@ export default function SidebarGroup({
   group,
   sites,
   unseenMap,
+  starredIds,
   selectedSiteId,
   focusedIndex,
   startIndex,
   onSelectSite,
+  onToggleFavorite,
   onToggleCollapse,
   onGroupContextMenu,
   onSiteContextMenu,
@@ -62,8 +66,10 @@ export default function SidebarGroup({
                   unseen={group.showUnread ? (unseenMap.get(site.ID) ?? 0) : 0}
                   isSelected={site.ID === selectedSiteId}
                   isFocused={startIndex + i === focusedIndex}
+                  isFavorite={starredIds.has(site.ID)}
                   dataIndex={startIndex + i}
                   onSelect={() => onSelectSite(site.ID)}
+                  onToggleFavorite={() => onToggleFavorite(site.ID)}
                   onContextMenu={(e) => onSiteContextMenu(site.ID, e)}
                 />
               ))}

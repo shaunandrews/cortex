@@ -126,7 +126,9 @@ export default function Sidebar({
     for (const entry of visible) {
       const matching = entry.sites.filter((s) => s.name.toLowerCase().includes(q));
       if (matching.length > 0) {
-        result.push({ group: entry.group, sites: matching });
+        // Force groups open while searching so matches are visible without
+        // manually expanding each group.
+        result.push({ group: { ...entry.group, collapsed: false }, sites: matching });
       }
     }
     return result;
@@ -306,10 +308,12 @@ export default function Sidebar({
                   group={entry.group}
                   sites={entry.sites}
                   unseenMap={unseenMap}
+                  starredIds={store.starredIds}
                   selectedSiteId={selectedSiteId}
                   focusedIndex={focusedIndex}
                   startIndex={startIndices.get(entry.group.id) ?? 0}
                   onSelectSite={onSelectSite}
+                  onToggleFavorite={store.toggleFavorite}
                   onToggleCollapse={(e) => handleHeaderClick(entry.group, e)}
                   onGroupContextMenu={(e) => handleGroupContextMenu(entry.group.id, e)}
                   onSiteContextMenu={handleSiteContextMenu}

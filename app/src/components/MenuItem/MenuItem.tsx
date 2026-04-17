@@ -7,7 +7,7 @@ export type MenuItemProps = Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'type'
   icon?: ReactNode;
   /** Main label. Strings get wrapped in a body-md Text; nodes render as-is. */
   label: ReactNode;
-  /** Right slot. Only rendered when greater than 0. */
+  /** Badge overlaid on the icon slot. Only rendered when greater than 0 and an icon is present. */
   count?: number;
   /** Persistent current/chosen state (e.g. the active route or selected site). */
   isSelected?: boolean;
@@ -26,7 +26,14 @@ const MenuItem = forwardRef<HTMLButtonElement, MenuItemProps>(function MenuItem(
 
   return (
     <button ref={ref} type="button" className={classes.join(' ')} {...rest}>
-      {icon !== undefined && <span className="menu-item-icon">{icon}</span>}
+      {icon !== undefined && (
+        <span className="menu-item-icon">
+          {icon}
+          {typeof count === 'number' && count > 0 && (
+            <span className="menu-item-count">{count}</span>
+          )}
+        </span>
+      )}
       {typeof label === 'string' ? (
         <Text variant="body-md" className="menu-item-label">
           {label}
@@ -34,7 +41,6 @@ const MenuItem = forwardRef<HTMLButtonElement, MenuItemProps>(function MenuItem(
       ) : (
         <span className="menu-item-label">{label}</span>
       )}
-      {typeof count === 'number' && count > 0 && <span className="menu-item-count">{count}</span>}
     </button>
   );
 });

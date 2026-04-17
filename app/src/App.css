@@ -33,6 +33,7 @@ body {
      sticky element with a positive z-index. Lift popovers above the
      sidebar's sticky group headers. */
   --wp-ui-popover-z-index: 100;
+  --wp-ui-tooltip-z-index: 100;
 
   /* WPDS border radius overrides — the defaults (1/2/4/8px) are too tight. */
   --wpds-border-radius-xs: 2px;
@@ -568,6 +569,34 @@ body {
   flex-direction: column;
   gap: 1px;
   padding: 2px 0 var(--wpds-dimension-padding-xs);
+}
+
+.sidebar-site {
+  position: relative;
+}
+
+.sidebar-site-favorite {
+  position: absolute;
+  top: 50%;
+  right: var(--wpds-dimension-padding-xs);
+  transform: translateY(-50%);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--motion-duration-quick) var(--motion-easing-default);
+}
+
+/* IconButton hardcodes its icon at 24px. Shrink the star so it reads as
+   a secondary affordance inside the compact sidebar row. */
+.sidebar-site-favorite svg {
+  width: 16px;
+  height: 16px;
+}
+
+.sidebar-site:hover .sidebar-site-favorite,
+.sidebar-site:has(.menu-item.is-focused) .sidebar-site-favorite,
+.sidebar-site-favorite:focus-visible {
+  opacity: 1;
+  pointer-events: auto;
 }
 
 /* Context menu */

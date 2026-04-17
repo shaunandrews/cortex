@@ -13,11 +13,12 @@ describe('MenuItem', () => {
     expect(screen.getByTestId('icon')).toBeInTheDocument();
   });
 
-  it('renders the count only when greater than zero', () => {
-    const { rerender } = render(<MenuItem label="Inbox" count={0} />);
+  it('renders the count badge on the icon only when greater than zero', () => {
+    const icon = <span data-testid="icon">★</span>;
+    const { rerender } = render(<MenuItem icon={icon} label="Inbox" count={0} />);
     expect(screen.queryByText('0')).not.toBeInTheDocument();
 
-    rerender(<MenuItem label="Inbox" count={5} />);
+    rerender(<MenuItem icon={icon} label="Inbox" count={5} />);
     expect(screen.getByText('5')).toBeInTheDocument();
   });
 

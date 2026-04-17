@@ -47,6 +47,7 @@
 }
 
 .menu-item-icon {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -65,18 +66,21 @@
 }
 
 .menu-item-count {
+  position: absolute;
+  top: -4px;
+  right: -4px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 18px;
-  height: 18px;
-  padding: 0 var(--wpds-dimension-padding-xs);
-  font-size: var(--wpds-typography-font-size-xs);
+  min-width: 14px;
+  height: 14px;
+  padding: 0 3px;
+  font-size: 10px;
   font-weight: var(--wpds-typography-font-weight-medium);
   line-height: 1;
   color: var(--wpds-color-fg-interactive-error-strong);
   background: var(--wpds-color-bg-interactive-error-strong);
   border-radius: 9999px;
-  flex-shrink: 0;
   font-variant-numeric: tabular-nums;
+  pointer-events: none;
 }
