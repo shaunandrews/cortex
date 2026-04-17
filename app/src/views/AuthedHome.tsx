@@ -7,7 +7,8 @@ import { useP2Sites } from '../hooks/useP2Sites';
 import { useP2Posts } from '../hooks/useP2Posts';
 import { useSidebarGroups } from '../hooks/useSidebarGroups';
 import { useFollowing } from '../hooks/useFollowing';
-import { useMarkAllAsSeen } from '../hooks/useMarkAsSeen';
+import { useMarkPostSeen, useMarkAllAsSeen } from '../hooks/useMarkAsSeen';
+import { useSeenPosts } from '../hooks/useSeenPosts';
 import { useCreatePost } from '../hooks/useCreatePost';
 import { CreateP2Dialog } from './CreateP2Dialog';
 import { relativeTime } from '../lib/relativeTime';
@@ -56,6 +57,8 @@ function SidebarSyncStatus() {
 export default function AuthedHome() {
   const { data: sites } = useP2Sites();
   const { data: following } = useFollowing();
+  const seenPosts = useSeenPosts();
+  const markPostSeen = useMarkPostSeen();
   const markAllAsSeen = useMarkAllAsSeen();
 
   const unseenMap = useMemo(() => {
@@ -182,6 +185,79 @@ export default function AuthedHome() {
     window.open(site.URL, '_blank', 'noopener,noreferrer');
   }, []);
 
+  // Keyboard navigation: ArrowUp/k = previous post, ArrowDown/j = next post
+  const feedPosts = useMemo(() => postsData?.posts ?? [], [postsData]);
+  const navItems = useMemo(() => {
+    return [...feedPosts].reverse().map((post) => {
+      const xOrigin = getXPostOrigin(post);
+      return {
+        siteId: xOrigin ? xOrigin.blogId : post.site_ID || selectedSiteId!,
+        postId: xOrigin ? xOrigin.postId : post.ID,
+        // For x-posts, track the x-post's own ID so we can mark it as seen too
+        xPostId: xOrigin ? post.ID : null,
+      };
+    });
+  }, [feedPosts, selectedSiteId]);
+
+  useEffect(() => {
+    if (!selectedSiteId || navItems.length === 0) return;
+
+    const handler = (e: KeyboardEvent) => {
+      // Don't capture when typing in an input/textarea
+      const tag = (e.target as HTMLElement)?.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+
+      const isUp = e.key === 'ArrowUp' || e.key === 'k';
+      const isDown = e.key === 'ArrowDown' || e.key === 'j';
+      if (!isUp && !isDown) return;
+
+      e.preventDefault();
+
+      const currentIdx = navItems.findIndex(
+        (item) => item.postId === detailPostId && item.siteId === detailSiteId,
+      );
+
+      let nextIdx: number;
+      if (currentIdx === -1) {
+        // Nothing selected — start from the bottom (newest)
+        nextIdx = navItems.length - 1;
+      } else if (isDown) {
+        nextIdx = Math.min(currentIdx + 1, navItems.length - 1);
+      } else {
+        nextIdx = Math.max(currentIdx - 1, 0);
+      }
+
+      const next = navItems[nextIdx];
+      if (next) {
+        // Mark x-post as seen on the current site (origin post is marked by PostDetailPanel)
+        if (
+          next.xPostId &&
+          selectedSiteId &&
+          !seenPosts.has(`${selectedSiteId}-${next.xPostId}`) &&
+          unseenMap.has(selectedSiteId)
+        ) {
+          markPostSeen(selectedSiteId, next.xPostId);
+        }
+        selectPost(next.siteId, next.postId);
+        // Scroll the post article into view
+        const articles = feedScrollRef.current?.querySelectorAll('article.post');
+        articles?.[nextIdx]?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+      }
+    };
+
+    document.addEventListener('keydown', handler);
+    return () => document.removeEventListener('keydown', handler);
+  }, [
+    selectedSiteId,
+    navItems,
+    detailPostId,
+    detailSiteId,
+    selectPost,
+    seenPosts,
+    unseenMap,
+    markPostSeen,
+  ]);
+
   // The detail panel, shared across all views
   const detailPanel =
     hasDetail && detailSiteId && detailPostId ? (
@@ -197,8 +273,6 @@ export default function AuthedHome() {
   const feedContent = (
     <main className="feed">
       {(() => {
-        const feedPosts = postsData?.posts ?? [];
-
         return (
           <>
             {selectedSiteId &&
@@ -327,7 +401,7 @@ export default function AuthedHome() {
                       return (
                         <article
                           key={feedPost.ID}
-                          className={`post post-xpost${xOrigin.postId === detailPostId && xOrigin.blogId === detailSiteId ? ' is-selected' : ''}`}
+                          className={`post post-xpost${xOrigin.postId === detailPostId && xOrigin.blogId === detailSiteId ? ' is-selected' : ''}${feedPost.is_seen || seenPosts.has(`${selectedSiteId}-${feedPost.ID}`) || !unseenMap.has(selectedSiteId!) ? ' is-seen' : ''}`}
                           onClick={(e) => {
                             if (
                               xOrigin.postId === detailPostId &&
@@ -336,6 +410,15 @@ export default function AuthedHome() {
                               closeDetail();
                             } else {
                               const el = e.currentTarget;
+                              // Mark the x-post itself as seen (origin post is marked by PostDetailPanel)
+                              if (
+                                !feedPost.is_seen &&
+                                !seenPosts.has(`${selectedSiteId}-${feedPost.ID}`) &&
+                                unseenMap.has(selectedSiteId!) &&
+                                selectedSiteId
+                              ) {
+                                markPostSeen(selectedSiteId, feedPost.ID);
+                              }
                               selectPost(xOrigin.blogId, xOrigin.postId);
                               setTimeout(
                                 () => el.scrollIntoView({ block: 'nearest', behavior: 'smooth' }),
@@ -381,7 +464,7 @@ export default function AuthedHome() {
                     return (
                       <article
                         key={`${postSiteId}-${feedPost.ID}`}
-                        className={`post${feedPost.ID === detailPostId ? ' is-selected' : ''}`}
+                        className={`post${feedPost.ID === detailPostId ? ' is-selected' : ''}${feedPost.is_seen || seenPosts.has(`${postSiteId}-${feedPost.ID}`) || !unseenMap.has(postSiteId) ? ' is-seen' : ''}`}
                         onClick={(e) => {
                           if (feedPost.ID === detailPostId && postSiteId === detailSiteId) {
                             closeDetail();
